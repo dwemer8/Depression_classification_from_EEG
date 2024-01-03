@@ -1,9 +1,14 @@
 from IPython.display import display
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from scipy.signal import spectrogram, periodogram
 from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score, \
                             accuracy_score, f1_score, recall_score, precision_score
-                             
+from sklearn.decomposition import PCA, TruncatedSVD
+from sklearn.manifold import TSNE
+
+from utils import SEED
 
 ##########################################################################
 #graphs
@@ -114,3 +119,42 @@ def printScores(y_tr, y_pr, is_display=True):
         display(pd.DataFrame({"F1": [f1], "Recall": [rec], "Precision": [prec], "Accuracy": [acc]}))
     else:
         print(f"F1: {f1:0.3f}, precision: {prec:0.3f}, recall: {rec:0.3f}, accuracy: {acc:0.3f}") 
+
+# dataset
+
+def dataset_hists(train_set, val_set, test_set):
+    for data_set in [train_set, val_set, test_set]:
+        n_channels = data_set["chunk"].shape[1]
+        fig, ax = plt.subplots(nrows=1, ncols=(n_channels+1), figsize=(16, 2))
+        fig.suptitle("train" if data_set is train_set else "val" if data_set is val_set else "test")
+        for i in range(n_channels): 
+            ax[i].hist(data_set["chunk"][:, i, :].flatten(), bins=20)
+            ax[i].set_title(f"Channel {i}")
+        ax[3].hist(data_set["target"], bins=3)
+        ax[3].set_title(f"Target")
+        plt.show()
+
+# embeddings visualization
+
+def plotData(X, y, method="pca", ax=plt, plot_type="regression", **kwargs):
+    n_components = 2
+    if method == "pca":
+        reducer = PCA(n_components=n_components, random_state=SEED, whiten=True, svd_solver="full", **kwargs)
+    elif method == "tsne":
+        reducer = TSNE(n_components=n_components, random_state=SEED, **kwargs)
+    elif method == "svd":
+        reducer = TruncatedSVD(n_components=n_components, random_state=SEED, **kwargs)
+    else:
+        raise "NotImplementedError"
+
+    X_reduced = reducer.fit_transform(X)
+
+    if method == "pca":
+        display(pd.DataFrame({"Explained variance": reducer.explained_variance_, "Ratio": reducer.explained_variance_ratio_}))
+    
+    if plot_type == "regression":
+        return sns.scatterplot(x=X_reduced[:, 0], y=X_reduced[:, 1], ax=ax, alpha=y)
+    elif plot_type == "classification":
+        return sns.scatterplot(x=X_reduced[:, 0], y=X_reduced[:, 1], ax=ax, alpha=0.3, hue=y)
+    else:
+        raise ValueError(f"Unexpected type {plot_type}")
