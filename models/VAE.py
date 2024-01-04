@@ -18,6 +18,7 @@ class VAE(torch.nn.Module):
         self.Z_DIM = args["latent_dim"]
         self.beta = args["beta"]
         self.input_dim = args["input_dim"]
+        self.first_decoder_conv_depth = args["first_decoder_conv_depth"]
         
     def _encode(self, imgs):
         z_params = self.encoder(imgs)
@@ -33,7 +34,7 @@ class VAE(torch.nn.Module):
     def _reconstruct(self, imgs):
         z_mean, z_log_std = self._encode(imgs)
         z = reparameterize(z_mean, z_log_std)
-        z = z.reshape(imgs.shape[0], 32, -1) #for 4-layer beta-VAE
+        if self.first_decoder_conv_depth is not None: z = z.reshape(imgs.shape[0], self.first_decoder_conv_depth, -1) #for 4-layer beta-VAE
         decoded_imgs = self.decode(z)
         return decoded_imgs, z_mean, z_log_std
     
@@ -44,7 +45,8 @@ class VAE(torch.nn.Module):
         decoded_imgs, z_mean, z_log_std = self._reconstruct(imgs)
 
         z_kl = kl(z_mean, z_log_std)
-        err = ((imgs - decoded_imgs)**2).sum([1, 2]) #for 4-layer beta-VAE err = ((imgs - decoded_imgs)**2).sum([1, 2, 3])
+        if self.first_decoder_conv_depth is not None: err = ((imgs - decoded_imgs)**2).sum([1, 2]) #for 4-layer beta-VAE 
+        else: err = ((imgs - decoded_imgs)**2).sum([1, 2, 3])
         log_p_x_given_z = -err
         loss = -log_p_x_given_z + self.beta*z_kl
 

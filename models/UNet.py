@@ -1,19 +1,20 @@
 # https://github.com/milesial/Pytorch-UNet
 # """ Full assembly of the parts to form the complete network """
+import torch
 import torch.nn as nn
 
-from .modules import Down, DoubleConv, Up_with_sc, OutDoubleConv
+from .modules import Down_with_sc, DoubleConv, Up_with_sc, OutDoubleConv
 
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=True, c1=64, c2=128, c3=256, c_neck=512):
-        super(UNet1, self).__init__()
+        super(UNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
 
-        self.down1 = Down(n_channels, c1, kernel_size=7) #64*256
-        self.down2 = Down(c1, c2, kernel_size=7) #128*128
-        self.down3 = Down(c2, c3,kernel_size=5) #256*64
+        self.down1 = Down_with_sc(n_channels, c1, kernel_size=7) #64*256
+        self.down2 = Down_with_sc(c1, c2, kernel_size=7) #128*128
+        self.down3 = Down_with_sc(c2, c3,kernel_size=5) #256*64
         self.neck = DoubleConv(c3, c_neck, kernel_size=3) #512*64
         self.up1 = Up_with_sc(c_neck, c3, kernel_size=3, concat=False) #256*128
         self.up2 = Up_with_sc(c3+c3, c2, kernel_size=3) #128*256

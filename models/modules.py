@@ -35,7 +35,27 @@ class DoubleConv(nn.Module):
         super().__init__()
         padding = int((kernel_size - 1) / 2)
 
-        self.double_conv = nn.Sequential(
+        self.conv = nn.Sequential(
+            nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
+            nn.BatchNorm1d(out_channels),
+            getattr(nn, activation)(),
+            
+            nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, padding=padding),
+            nn.BatchNorm1d(out_channels),
+            getattr(nn, activation)(),
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+
+class TripleConv(nn.Module):
+    """(convolution => [BN] => ReLU) * 2"""
+
+    def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
+        super().__init__()
+        padding = int((kernel_size - 1) / 2)
+
+        self.conv = nn.Sequential(
             nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
             nn.BatchNorm1d(out_channels),
             getattr(nn, activation)(),
@@ -50,7 +70,7 @@ class DoubleConv(nn.Module):
         )
 
     def forward(self, x):
-        return self.double_conv(x)
+        return self.conv(x)
 
 class OutDoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) => convolution"""
@@ -71,17 +91,21 @@ class OutDoubleConv(nn.Module):
 
 class Down(nn.Module):
     """Downscaling with maxpool then double conv"""
-
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init__()
-        self.maxpool_conv = nn.Sequential(
-            nn.MaxPool1d(2),
-            DoubleConv(in_channels, out_channels,kernel_size)
-        )
+        self.conv = DoubleConv(in_channels, out_channels, kernel_size)
+        self.maxpool = nn.MaxPool1d(2)
 
     def forward(self, x):
-        return self.maxpool_conv(x)
+        return self.maxpool(self.conv(x))
 
+class Down_with_sc(Down):
+    """Downscaling with maxpool then double conv"""
+    
+    def forward(self, x):
+        x1 = self.conv(x)
+        return self.maxpool(x1), x1
+        
 
 class Up(nn.Module):
     """Upscaling then double conv"""

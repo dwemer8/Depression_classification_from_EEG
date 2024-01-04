@@ -24,9 +24,9 @@ class AE(nn.Module):
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
-        x = self.up1(x4, x3)
-        x = self.up2(x, x2)
-        x = self.up3(x, x1)
+        x = self.up1(x4)
+        x = self.up2(x)
+        x = self.up3(x)
         logits = self.outc(x)
         return logits
     
