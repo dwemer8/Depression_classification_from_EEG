@@ -10,6 +10,11 @@ from sklearn.manifold import TSNE
 
 from utils import SEED
 
+# import pandas as pd
+
+def dict_to_df(results):
+    return pd.DataFrame(dict([(key, [f"{value:.3f}"]) for key, value in results.items()]))
+
 ##########################################################################
 #graphs
 ##########################################################################

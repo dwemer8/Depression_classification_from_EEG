@@ -82,15 +82,34 @@ class Logger:
     
     def _append_other(self, k, v):
         self.addOrCreate(self.other_values, k, v)
+
+    def flatten(self, d, current_path=""):
+        def join_paths(root, leaf):
+            if root == "": return leaf
+            else: return root + "." + leaf
+
+        d_flatten = {}
         
-    def update(self, d):
         for key in d:
-            self._append(key, d[key])
+            if isinstance(d[key], dict): d_flatten.update(self.flatten(d[key], current_path=join_paths(current_path, key)))
+            elif isinstance(d[key], tuple) or isinstance(d[key], list):
+                for i in range(len(d[key])):
+                    d_flatten.update(self.flatten({f"{i}": d[key][i]}, join_paths(current_path, key)))
+            else:
+                d_flatten[join_paths(current_path, key)] = d[key]
+                
+        return d_flatten
+                    
+    def update(self, d):
+        flatten_d = self.flatten(d)
+        for key in flatten_d:
+            self._append(key, flatten_d[key])
         self.n_steps += 1
     
     def update_other(self, d):
-        for key in d:
-            self._append_other(key, d[key])
+        flatten_d = self.flatten(d)
+        for key in flatten_d:
+            self._append_other(key, flatten_d[key])
         self.n_steps_other += 1
         
     def average(self):
@@ -133,3 +152,10 @@ class Logger:
             if self.is_save_model:
                 self.run.log_artifact(self.artifact)
             wandb.finish()
+
+    def update_summary(self, key, value):
+        if self.log_type == "wandb":
+            self.run.summary[key] = value
+            # self.run.summary.update()
+        else:
+            print(f"WARNING: log type should be 'wandb' instead of {self.log_type}, nothing was done")
