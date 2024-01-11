@@ -50,7 +50,7 @@ def train_eval(
     dataloader,
     model,
     device="cuda",
-    mode="train",
+    mode="train", #train or something else
     optimizer=None,
     test_dataset=None,
     targets_test=None,
@@ -74,6 +74,7 @@ def train_eval(
     plot_type="regression", #"regression"/"classification"
     
     loss_coefs=None,
+    loss_reduction="mean",
     
     is_mask=False,
     mask_ratio=0,
@@ -107,30 +108,30 @@ def train_eval(
     
             #Loss parts computation
             sum_dims = tuple(range(1, len(imgs.shape)))
+            reduce_func = getattr(torch, loss_reduction)
             
             #amplitude
-            loss_ampl = ((outputs - imgs.to(device))**2).sum(sum_dims).mean()
+            loss_ampl = reduce_func((outputs - imgs.to(device))**2, sum_dims).mean()
     
             #velocity
             outputs_vel = (outputs[:, :, :-1] - outputs[:, :, 1:])
             imgs_vel = (imgs.to(device)[:, :, :-1] - imgs.to(device)[:, :, 1:])
-            loss_vel = ((outputs_vel - imgs_vel)**2).sum(sum_dims).mean()
+            loss_vel = reduce_func((outputs_vel - imgs_vel)**2, sum_dims).mean()
     
             #acceleration
             outputs_acc = (outputs_vel[:, :, :-1] - outputs_vel[:, :, 1:])
             imgs_acc = (imgs_vel[:, :, :-1] - imgs_vel[:, :, 1:])
-            loss_acc = ((outputs_acc - imgs_acc)**2).sum(sum_dims).mean()
+            loss_acc = reduce_func((outputs_acc - imgs_acc)**2, sum_dims).mean()
     
             #frequency
             Foutputs = torch.fft.fft(outputs)
             Foutputs_abs = torch.nn.functional.normalize(torch.abs(outputs), dim=sum_dims[-1])
             Fimgs = torch.fft.fft(imgs.to(device))
             Fimgs_abs = torch.nn.functional.normalize(torch.abs(Fimgs), dim=sum_dims[-1])
-            loss_frq = ((Foutputs_abs - Fimgs_abs)**2).sum(sum_dims).mean()
+            loss_frq = reduce_func((Foutputs_abs - Fimgs_abs)**2, sum_dims).mean()
     
             #summation
             if check_instance(model, [VAE, BetaVAE_H, BetaVAE_B]):
-                if loss_coefs is None: loss_coefs = {"ampl": 1, "vel": 0, "acc": 0, "frq": 0, "kl": 1}
                 loss_mean = (
                     loss_coefs["ampl"]*loss_ampl + 
                     loss_coefs["vel"]*loss_vel + 
@@ -139,7 +140,6 @@ def train_eval(
                     loss_coefs["kl"]*results['-log p(x|z)']
                 )/np.sum(list(loss_coefs.values()))
             else:
-                if loss_coefs is None: loss_coefs = {"ampl": 1, "vel": 0, "acc": 0, "frq": 0}
                 loss_mean = (
                     loss_coefs["ampl"]*loss_ampl + 
                     loss_coefs["vel"]*loss_vel + 
@@ -167,8 +167,9 @@ def train_eval(
             corr_avg = corr_running/torch.prod(torch.tensor(imgs.shape[:-1]))
 
             ##metric
-            err = ((imgs - decoded_imgs)**2).sum(tuple(range(1, len(imgs.shape))))
-            max_diff_norm = torch.prod(torch.tensor(imgs.shape[1:])) * 1
+            err = reduce_func((imgs - decoded_imgs)**2, sum_dims)
+            if loss_reduction == "mean": max_diff_norm = 1
+            else: max_diff_norm = torch.prod(torch.tensor(imgs.shape[1:]))
             metric = 1 - err / max_diff_norm #in [0, 1]
             
             ##snr
@@ -186,7 +187,8 @@ def train_eval(
                 'loss_ampl': loss_ampl.cpu(),
                 'loss_vel': loss_vel.cpu(),
                 'loss_acc': loss_acc.cpu(),
-                'loss_frq': loss_frq.cpu()
+                'loss_frq': loss_frq.cpu(),
+                "RMSE" : torch.sqrt(loss_ampl.cpu()),
             })
             if check_instance(model, [VAE, BetaVAE_H, BetaVAE_B]):
                 for key in ['-log p(x|z)', "kl"]: logger._append(key, results[key])
@@ -246,8 +248,7 @@ def train_eval(
             #classifier/regressor metrics evaluation
             if (check_period is not None and step % check_period == 0) or\
             (check_steps is not None and step in check_steps):
-                if ml_model is None or ml_param_grid is None or ml_eval_function is None:
-                    raise ValueError("Any of ml parameter is not defined")
+                if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
 
                 print("Classifier/regressor metrics evaluation...")
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)

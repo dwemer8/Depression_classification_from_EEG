@@ -20,8 +20,8 @@ def evaluateClassifier(
     test_size=0.33,
     SEED=SEED,
     cv_scorer=accuracy_score,
-    metrics = [(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
-    metrics_for_CI = [(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
+    metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
+    metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):
@@ -79,7 +79,7 @@ def evaluateClassifier_inner_outer_cv(
     verbose=1,
     SEED=SEED,
     cv_scorer=accuracy_score,
-    metrics = [(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
+    metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_splits=10,
 ):
     inner_cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
