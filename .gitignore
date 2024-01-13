@@ -1,4 +1,6 @@
 *pycache*
 *.ipynb_checkpoints*
-utils/.ipynb_checkpoints/*
-utils/__pycache__/*
+*checkpoint.py
+.ipynb_checkpoints/
+__pycache__/
+utils/.ipynb_checkpoints/data_reading-checkpoint.py
