@@ -59,27 +59,29 @@ class DataReader:
     '''
     Class for reading and splitting data from pickle file
     '''
-    def __init__(self, file, verbose=1, dataset_type="depression_anonymized"):
+    def __init__(self, file, verbose=0, dataset_type="depression_anonymized"):
+        if dataset_type not in ["inhouse_dataset", "depression_anonymized", "TUAB"]:
+            raise NotImplementedError(f"Unkown dataset type {dataset_type}")
+        
         self.dataset_type = dataset_type
+        self.verbose = verbose
         with open(file, "rb") as f:
             self.chunks_list = pickle.load(f)
-
-        if verbose:
+        
+        if self.verbose > 0:
             if self.dataset_type in ["inhouse_dataset", "depression_anonymized"]: 
                 print("\nChunks shape:", self.chunks_list[0]["chunk"].shape, ", length:", len(self.chunks_list), ", keys:", self.chunks_list[0].keys())
             elif self.dataset_type == "TUAB":
                 print("\nChunks shape:", self.chunks_list["chunks_train"][0].shape, ", length:", len(self.chunks_list["chunks_train"]), ", keys:", self.chunks_list.keys())
-            else:
-                raise NotImplementedError(f"Unkown dataset type {self.dataset_type}")
 
-    def split(self, val_size=0.1, test_size=0.1, verbose=1):
+    def split(self, val_size=0.1, test_size=0.1):
         if self.dataset_type in ["depression_anonymized", "inhouse_dataset"]:
             '''
             We need to divide data in such way that records from the same patient should be only in train or test or validation
             '''
             #reading patients tags and associated targets
             patients_targets = pd.DataFrame.from_records([{"patient": x["patient"], "target": x["target"]} for x in self.chunks_list]).drop_duplicates().reset_index(drop=True)
-            if verbose: print(f"N patients = {len(patients_targets)}")
+            if self.verbose > 0: print(f"N patients = {len(patients_targets)}")
 
             #split to train, val and test
             patients_train, patients_val_test = train_test_split(patients_targets, test_size=(val_size + test_size), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
@@ -87,13 +89,13 @@ class DataReader:
 
             #type conversion
             patients_train, patients_val, patients_test = patients_train["patient"].values, patients_val["patient"].values, patients_test["patient"].values
-            print(f"Train={len(patients_train)}, validation={len(patients_val)}, test={len(patients_test)}")
+            if self.verbose > 0: print(f"Train={len(patients_train)}, validation={len(patients_val)}, test={len(patients_test)}")
 
             #go through dataset and distribution of data points to datasets
             reset = {"chunk": [], "target": [], "patient": []}
             train_set, val_set, test_set = deepcopy(reset), deepcopy(reset), deepcopy(reset)
-            
-            for chunk in tqdm(self.chunks_list):
+
+            def f(chunk):
                 patient_id = chunk["patient"]
                 was_added = False
                 for data_set, patients in zip([train_set, val_set, test_set], [patients_train, patients_val, patients_test]):
@@ -104,12 +106,19 @@ class DataReader:
                 if not was_added:
                     raise ValueError(f"Unexpected patient id {patient_id}")
 
+            if self.verbose > 0:
+                for chunk in tqdm(self.chunks_list):
+                    f(chunk)
+            else:
+                for chunk in self.chunks_list:
+                    f(chunk)
+
             #type conversion
             for data_set in [train_set, val_set, test_set]:
                 data_set["chunk"] = np.array(data_set["chunk"])
                 data_set["target"] = np.array(data_set["target"])
             
-            if verbose:
+            if self.verbose > 0: 
                 print("Train:", len(train_set["chunk"]), train_set["chunk"][0].shape)
                 print("Validation:", len(val_set["chunk"]), val_set["chunk"][0].shape)
                 print("Test:", len(test_set["chunk"]), test_set["chunk"][0].shape)

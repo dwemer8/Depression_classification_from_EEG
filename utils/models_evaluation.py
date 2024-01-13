@@ -49,7 +49,7 @@ def evaluateClassifier(
         scoring=make_scorer(cv_scorer),
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED),
         n_jobs=-1,
-        verbose=verbose
+        verbose=max(verbose-1, 0)
     ) 
 
     clf.fit(X_train, y_train)
@@ -92,7 +92,7 @@ def evaluateClassifier_inner_outer_cv(
         scoring=make_scorer(cv_scorer),
         cv=inner_cv,
         n_jobs=-1,
-        verbose=(verbose-1)
+        verbose=max(verbose-1, 0)
     )
     clf.fit(X, y)
 

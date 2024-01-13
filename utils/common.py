@@ -17,3 +17,8 @@ def seed_all(SEED):
     np.random.seed(SEED)
     random.seed(SEED)
     os.environ['PYTHONHASHSEED'] = str(SEED)
+
+def printLog(s, logfile=None):
+    print(s)
+    if logfile is not None:
+        print(s, file=logfile)

@@ -167,7 +167,7 @@ def evaluateMetrics(
     return estimates
 
 def evalConfInt_cv(clf, X, y, cv, scorer, alpha=0.05, verbose=1):
-    scores = cross_val_score(clf, X, y, cv=cv, scoring=scorer, verbose=(verbose if verbose >= 0 else 0))
+    scores = cross_val_score(clf, X, y, cv=cv, scoring=scorer, verbose=max(verbose-1, 0))
     perc = sts.norm.ppf(1 - alpha/2)
     est = scores.mean()
     se = scores.std() * perc

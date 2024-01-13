@@ -79,14 +79,15 @@ def train_eval(
     is_mask=False,
     mask_ratio=0,
 
-    avg_embeddings_over_time=False
-):
+    avg_embeddings_over_time=False,
+    verbose=0,
+):  
     if mode == "train":
         model.train()
-        print("Model is in train mode")
+        if verbose - 1 > 0: print("Model is in train mode")
     else:
         model.eval()
-        print("Model is in evaluation mode")
+        if verbose - 1 > 0: print("Model is in evaluation mode")
 
     try:
         logger.reset()
@@ -250,7 +251,7 @@ def train_eval(
             (check_steps is not None and step in check_steps):
                 if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
 
-                print("Classifier/regressor metrics evaluation...")
+                if verbose - 1 > 0: print("Classifier/regressor metrics evaluation...")
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
                 results = {}
                 for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
