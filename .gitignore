@@ -3,3 +3,7 @@
 *checkpoint.py
 utils/.ipynb_checkpoints/
 utils/__pycache__/
+Data/
+artifacts/
+model_weights/
+wandb/
