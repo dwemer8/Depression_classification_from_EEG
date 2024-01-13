@@ -127,15 +127,15 @@ def printScores(y_tr, y_pr, is_display=True):
 
 # dataset
 
-def dataset_hists(train_set, val_set, test_set):
+def dataset_hists(train_set, val_set, test_set, chunk_bins=20, target_bins=3, chunk_range=None, target_range=None):
     for data_set in [train_set, val_set, test_set]:
-        n_channels = data_set["chunk"].shape[1]
+        n_channels = data_set["chunk"].shape[-2]
         fig, ax = plt.subplots(nrows=1, ncols=(n_channels+1), figsize=(16, 2))
         fig.suptitle("train" if data_set is train_set else "val" if data_set is val_set else "test")
         for i in range(n_channels): 
-            ax[i].hist(data_set["chunk"][:, i, :].flatten(), bins=20)
+            ax[i].hist(data_set["chunk"].squeeze()[:, i, :].flatten(), bins=chunk_bins, range=chunk_range)
             ax[i].set_title(f"Channel {i}")
-        ax[3].hist(data_set["target"], bins=3)
+        ax[3].hist(data_set["target"], bins=target_bins, range=target_range)
         ax[3].set_title(f"Target")
         plt.show()
 
