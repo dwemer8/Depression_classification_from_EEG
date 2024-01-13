@@ -1,6 +1,7 @@
 from IPython.display import display
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 import pandas as pd
 from scipy.signal import spectrogram, periodogram
 from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, average_precision_score, \
@@ -163,3 +164,27 @@ def plotData(X, y, method="pca", ax=plt, plot_type="regression", **kwargs):
         return sns.scatterplot(x=X_reduced[:, 0], y=X_reduced[:, 1], ax=ax, alpha=0.3, hue=y)
     else:
         raise ValueError(f"Unexpected type {plot_type}")
+
+def plotSamplesFromDataset(dataset):
+    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(15, 2))
+    fig.suptitle("Samples")
+    for i in range(3): ax[i].plot(dataset[np.random.choice(list(range(len(dataset))))].squeeze().T)
+    plt.show()
+
+def printDatasetMeta(train_dataset, val_dataset, test_dataset):
+    print("Train dataset:", len(train_dataset))
+    print("Val dataset:", len(val_dataset))
+    print("Test dataset:", len(test_dataset))
+    
+    print("Train sample shape:", train_dataset[0].shape)
+    print("Val sample shape:", val_dataset[0].shape)
+    print("Test sample shape:", test_dataset[0].shape)
+    
+    print("Train sample type:", train_dataset[0].type())
+    print("Val sample type:", val_dataset[0].type())
+    print("Test sample type:", test_dataset[0].type())
+
+def printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader):
+    print("Train dataloader:", len(train_dataloader))
+    print("Val dataloader:", len(val_dataloader))
+    print("Test dataloader:", len(test_dataloader))

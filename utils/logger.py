@@ -51,7 +51,7 @@ class Logger:
             print("Logging via WandB")
             
             self.run = wandb.init(name=self.run_name, project=project_name, config=config)  # Initialize wandb
-            self.artifact = wandb.Artifact(config['model'], type='model', description=model_description, metadata=config)
+            self.artifact = wandb.Artifact(config['model']["model"], type='model', description=model_description, metadata=config)
             
             wandb.watch(model, log_freq=log_freq)
             
