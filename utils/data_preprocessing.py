@@ -261,7 +261,7 @@ def processTUABdataDirectory(
             n_files_read += 1
     
             #get chunks from .edf
-            chunks_from_record = preprocessRecord(directory + file_name)
+            chunks_from_record = preprocessRecord(directory + file_name, **kwargs)
     
             #append all chunks with targets to dataset
             for chunk in chunks_from_record:
