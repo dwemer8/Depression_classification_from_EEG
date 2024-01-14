@@ -185,6 +185,7 @@ def evaluateMetrics_cv(
     estimates = {}
     for method, method_type in metrics:
         method_name = get_object_name(method)
+            
         if method_type == "soft": scorer = make_scorer(method, needs_proba=True)
         elif method_type == "hard": scorer = make_scorer(method)
             

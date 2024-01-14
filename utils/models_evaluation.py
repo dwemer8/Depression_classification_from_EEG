@@ -53,9 +53,10 @@ def evaluateClassifier(
     ) 
 
     clf.fit(X_train, y_train)
+    if verbose > 0: print("Best classifier:", clf.best_estimator_)
 
     if verbose > 0: print("Evaluation on the train data")
-    estimates_train = evaluate(clf, X_train, y_train)
+    estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
 
     if verbose - 1 > 0:
         print("Best classifier:")
@@ -64,7 +65,7 @@ def evaluateClassifier(
         print(f"Train accuracy: {accuracy_train}")
     
     if verbose > 0: print("Evaluation on the test data")
-    estimates_test = evaluate(clf, X_test, y_test)
+    estimates_test = evaluate(clf.best_estimator_, X_test, y_test)
     
     return {
         "train": estimates_train,
@@ -80,10 +81,13 @@ def evaluateClassifier_inner_outer_cv(
     SEED=SEED,
     cv_scorer=accuracy_score,
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
-    n_splits=10,
+    n_splits_inner=10,
+    n_splits_outer=10,
 ):
-    inner_cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED)
-    outer_cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=SEED+1)
+    model = deepcopy(model)
+    
+    inner_cv = StratifiedKFold(n_splits=n_splits_inner, shuffle=True, random_state=SEED)
+    outer_cv = StratifiedKFold(n_splits=n_splits_outer, shuffle=True, random_state=SEED+1)
 
     if verbose > 0: print("GridSearchCV")
     clf = GridSearchCV(
@@ -95,11 +99,12 @@ def evaluateClassifier_inner_outer_cv(
         verbose=max(verbose-1, 0)
     )
     clf.fit(X, y)
+    if verbose > 0: print("Best estimator:", clf.best_estimator_)
 
     if verbose > 0: print("Evaluation on the train data")
-    estimates_train = evaluateMetrics_cv(clf, X, y, inner_cv, metrics, verbose=(verbose-1))
+    estimates_train = evaluateMetrics_cv(clf.best_estimator_, X, y, inner_cv, metrics, verbose=(verbose-1))
     if verbose > 0: print("Evaluation on the test data")
-    estimates_test = evaluateMetrics_cv(clf, X, y, outer_cv, metrics, verbose=(verbose-1))
+    estimates_test = evaluateMetrics_cv(clf.best_estimator_, X, y, outer_cv, metrics, verbose=(verbose-1))
     
     return {
         "train": estimates_train,
@@ -115,9 +120,6 @@ def evaluateRegressor(
     test_size=0.33,
     SEED=SEED
 ):
-    '''
-    TODO: update
-    '''
     def evaluate(reg, X, y):
         y_pred = reg.predict(X)
         return mse(y, y_pred)
@@ -138,17 +140,17 @@ def evaluateRegressor(
     ) 
 
     reg.fit(X_train, y_train)
+    if verbose > 0: print("Best regressor:", reg.best_estimator_) 
 
     if verbose > 0: print("Evaluation on the train data")
-    mse_train = evaluate(reg, X_train, y_train)
+    mse_train = evaluate(reg.best_estimator_, X_train, y_train)
     
     if verbose - 1 > 0:
-        print("Best classifier:")
         print("Parameters:", reg.best_params_)
         print("Score:", reg.best_score_)
     
     if verbose > 0: print("Evaluation on the test data")
-    mse_test = evaluate(reg, X_test, y_test)
+    mse_test = evaluate(reg.best_estimator_, X_test, y_test)
 
     return {
         "test" : {"mse" : mse_test},
