@@ -1,10 +1,11 @@
+import os
 import numpy as np
 import pandas as pd
 import mne
 from tqdm.auto import tqdm
 import pickle
 
-from .data_reading import readDataExt_one
+from .data_reading import readDataExt_one, readDataExt_mul
 
 SAMPLING_FREQUENCY = 250 #Hz
 L_FREQ = 0.1 #Hz
@@ -12,6 +13,10 @@ H_FREQ = 30 #Hz
 AMPLITUDE_THRESHOLD = 0.005 #V
 STD_THRESHOLD = 5
 TRANSIENT_STD_THRESHOLD = 3
+
+def save_preprocessed_data(chunks_list, file):
+    with open(file, "wb") as f:
+        pickle.dump(chunks_list, f)
 
 def pickChunks(df, ch_names, n_samples_per_chunk=124):
     chunks = []
@@ -62,9 +67,21 @@ def processPatientData(
     amplitude_threshold = AMPLITUDE_THRESHOLD,
     **kwargs
 ):
+    '''
+    This function:
+        - make mne Raw from df, 
+        - apply average reference
+        - filter
+        - resample
+        - convert to df
+        - clip
+        - normalize
+        - divide df to chunks
+    It returns array of chunks in pd.DataFrame format. Perform preprocessing over all channels.
+    '''
     #average reference, filtration
     ch_names = df.columns.to_list()[1:] #delete 'time' #['t6', 't4', 'o1', 'f8', 'p4', 'c4', 't3', 'f7', 'f3', 'o2', 'f4', 'c3', 'p3', 't5', 'cz', 'fp1', 'fp2', 'pz', 'fz']
-    ch_types = ['eeg'] * 19
+    ch_types = ['eeg'] * len(ch_names)
     info = mne.create_info(ch_names, ch_types=ch_types, sfreq=source_freq)
     raw = mne.io.RawArray(df[ch_names].to_numpy(copy=True).T / divider, info, verbose=False) #data in microvolts
     raw, _ = mne.set_eeg_reference(raw, ref_channels='average', verbose=False) #average reference
@@ -113,6 +130,40 @@ def preprocessDepressionAnonymizedData(
     print("\nChunks shape:", chunks_list[0]["chunk"].shape, ", chunks number:", len(chunks_list))
     return chunks_list
 
-def save_preprocessed_data(chunks_list, file):
-    with open(file, "wb") as f:
-        pickle.dump(chunks_list, f)
+def preprocessInhouseDatasetData(
+    directory,
+    data_folders,
+    picked_channels,
+    **kwargs
+):
+
+    #read path_file.csv with targets and patients tags
+    data_epoch_descr = pd.read_csv(os.path.join(directory, "path_file.csv")).drop(["Unnamed: 0"], axis="columns")
+    data_epoch_descr["fn"] = data_epoch_descr["fn"].map(lambda x: x.split("/")[-1]) #remove dir from filenames
+
+    #read data from MMD and Healthy dirs
+    dirs = [os.path.join(directory, x) for x in data_folders] 
+    data_epoch_list = readDataExt_mul(dirs, is_list=True)
+
+    #flat data list [N_dirs x N_dfs] -> [N_dirs*N_dfs]
+    data_epoch_list_ = []
+    for df_list in data_epoch_list: data_epoch_list_.extend(df_list)
+    data_epoch_list = data_epoch_list_
+
+    #divide dfs to chunks
+    chunks_list = []
+    for df in tqdm(data_epoch_list):
+        chunks_from_patient = processPatientData(df.drop(['file_name', "Unnamed: 0"], axis=1), **kwargs)
+        file_mask = data_epoch_descr["fn"] == df['file_name'].iloc[0]
+        target = data_epoch_descr[file_mask].iloc[0]['target']
+    
+        for chunk in chunks_from_patient:
+            image = chunk[picked_channels].to_numpy().T
+            chunks_list.append({
+                "chunk": image,
+                "target": target,
+                "patient": df['file_name'].iloc[0]
+            })
+    
+    print("\nChunks shape:", chunks_list[0]["chunk"].shape, "length:", len(chunks_list))
+    return chunks_list
