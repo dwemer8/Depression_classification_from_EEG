@@ -74,7 +74,7 @@ class DataReader:
             elif self.dataset_type == "TUAB":
                 print("\nChunks shape:", self.chunks_list["chunks_train"][0].shape, ", length:", len(self.chunks_list["chunks_train"]), ", keys:", self.chunks_list.keys())
 
-    def split(self, val_size=0.1, test_size=0.1):
+    def split(self, train_size=None, val_size=0.1, test_size=0.1):
         if self.dataset_type in ["depression_anonymized", "inhouse_dataset"]:
             '''
             We need to divide data in such way that records from the same patient should be only in train or test or validation
@@ -84,8 +84,27 @@ class DataReader:
             if self.verbose > 0: print(f"N patients = {len(patients_targets)}")
 
             #split to train, val and test
-            patients_train, patients_val_test = train_test_split(patients_targets, test_size=(val_size + test_size), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
-            patients_val, patients_test = train_test_split(patients_val_test, test_size=(test_size/(test_size+val_size)), random_state=SEED, stratify=patients_val_test["target"], shuffle=True)
+            def empty_patients_df():
+                return pd.DataFrame({"patient": [], "target": []})
+
+            if (train_size is None or train_size != 0) and val_size == 0 and test_size == 0:
+                if train_size is not None: patients_train = patients_targets[:train_size]
+                else: patients_train = patients_targets
+                patients_val = empty_patients_df()
+                patients_test = empty_patients_df()
+                
+            elif train_size == 0 and val_size != 0 and test_size != 0:
+                patients_train = empty_patients_df()
+                patients_val, patients_test = train_test_split(patients_targets, test_size=(test_size/(test_size+val_size)), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
+                
+            elif (train_size is None or train_size != 0) and val_size != 0 and test_size != 0:
+                patients_train, patients_val_test = train_test_split(patients_targets, test_size=(val_size + test_size), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
+                patients_val, patients_test = train_test_split(patients_val_test, test_size=(test_size/(test_size+val_size)), random_state=SEED, stratify=patients_val_test["target"], shuffle=True)
+                if train_size is not None: patients_train = patients_train[:train_size]
+            
+            else:
+                raise NotImplementedError(f"Unsupported combination of train_size={train_size}, val_size={val_size} and test_size={test_size}")
+            
 
             #type conversion
             patients_train, patients_val, patients_test = patients_train["patient"].values, patients_val["patient"].values, patients_test["patient"].values
@@ -95,7 +114,7 @@ class DataReader:
             reset = {"chunk": [], "target": [], "patient": []}
             train_set, val_set, test_set = deepcopy(reset), deepcopy(reset), deepcopy(reset)
 
-            def f(chunk):
+            def f(chunk, verbose=1, prev_chunk_patient_id = ""):
                 patient_id = chunk["patient"]
                 was_added = False
                 for data_set, patients in zip([train_set, val_set, test_set], [patients_train, patients_val, patients_test]):
@@ -103,15 +122,17 @@ class DataReader:
                         for tag in ["chunk", "target", "patient"]:
                             data_set[tag].append(chunk[tag])
                             was_added = True
-                if not was_added:
-                    raise ValueError(f"Unexpected patient id {patient_id}")
+                    if verbose and not was_added and patient_id != prev_chunk_patient_id:
+                        print (f"WARNING: Patient data with id {patient_id} wasn't added to any dataset")
+                return patient_id
 
             if self.verbose > 0:
+                prev_chunk_patient_id = ""
                 for chunk in tqdm(self.chunks_list):
-                    f(chunk)
+                    prev_chunk_patient_id = f(chunk, self.verbose, prev_chunk_patient_id=prev_chunk_patient_id)
             else:
                 for chunk in self.chunks_list:
-                    f(chunk)
+                    f(chunk, self.verbose)
 
             #type conversion
             for data_set in [train_set, val_set, test_set]:
@@ -119,13 +140,14 @@ class DataReader:
                 data_set["target"] = np.array(data_set["target"])
             
             if self.verbose > 0: 
-                print("Train:", len(train_set["chunk"]), train_set["chunk"][0].shape)
-                print("Validation:", len(val_set["chunk"]), val_set["chunk"][0].shape)
-                print("Test:", len(test_set["chunk"]), test_set["chunk"][0].shape)
+                if len(train_set["chunk"]) > 0: print("Train:", len(train_set["chunk"]), train_set["chunk"][0].shape)
+                if len(val_set["chunk"]) > 0: print("Validation:", len(val_set["chunk"]), val_set["chunk"][0].shape)
+                if len(test_set["chunk"]) > 0: print("Test:", len(test_set["chunk"]), test_set["chunk"][0].shape)
     
             return train_set, val_set, test_set
 
         elif self.dataset_type == "TUAB":
+            print("WARNING: train_size, val_size and test_size were ignored")
             train_set = {"chunk" : self.chunks_list["chunks_train"], "target" : self.chunks_list["targets_train"]}
             val_set = {"chunk" : self.chunks_list["chunks_val"], "target" : self.chunks_list["targets_val"]}
             test_set = {"chunk" : self.chunks_list["chunks_test"], "target" : self.chunks_list["targets_test"]}
