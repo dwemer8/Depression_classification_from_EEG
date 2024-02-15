@@ -21,7 +21,7 @@ class VAE(torch.nn.Module):
         self.beta = args["beta"]
         self.input_dim = args["input_dim"]
         self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss redicing
-        self.loss_reduce_mode = args["loss_reduce_mode"] #sum or mean
+        self.loss_reduction = args["loss_reduction"] #sum or mean
         
     def _encode(self, imgs):
         z_params = self.encoder(imgs)
@@ -47,12 +47,12 @@ class VAE(torch.nn.Module):
     def forward(self, imgs):
         decoded_imgs, z_mean, z_log_std = self._reconstruct(imgs)
 
-        z_kl = kl(z_mean, z_log_std, reduce_mode=self.loss_reduce_mode)
+        z_kl = kl(z_mean, z_log_std, reduce_mode=self.loss_reduction)
         if self.first_decoder_conv_depth is not None: reduce_dims = [1, 2]
         else: reduce_dims = [1, 2, 3]
-        if self.loss_reduce_mode == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
-        elif self.loss_reduce_mode == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
-        else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduce_mode}")
+        if self.loss_reduction == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
+        elif self.loss_reduction == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
+        else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduction}")
         log_p_x_given_z = -err
         loss = -log_p_x_given_z + self.beta*z_kl
 
@@ -143,7 +143,7 @@ class BetaVAE_H(nn.Module):
         self.z_dim = args["latent_dim"]
         self.beta = args["beta"]
         self.decoder_dist = "gaussian" #"gaussian"/"bernoulli"
-        self.loss_reduce_mode = args["loss_reduce_mode"]
+        self.loss_reduction = args["loss_reduction"]
         
         self.encoder = encoder
         self.decoder = decoder
@@ -158,10 +158,10 @@ class BetaVAE_H(nn.Module):
     def forward(self, x):
         x_recon, mu, logvar = self._reconstruct(x)
         
-        recon_loss = reconstruction_loss(x, x_recon, self.decoder_dist, reduce_mode=self.loss_reduce_mode)
+        recon_loss = reconstruction_loss(x, x_recon, self.decoder_dist, reduce_mode=self.loss_reduction)
         total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
-        if self.loss_reduce_mode == "sum": kl = total_kld
-        elif self.loss_reduce_mode == "mean": kl == mean_kld
+        if self.loss_reduction == "sum": kl = total_kld
+        elif self.loss_reduction == "mean": kl == mean_kld
         
         beta_vae_loss = recon_loss + self.beta*kl
 
@@ -209,10 +209,10 @@ class BetaVAE_B(BetaVAE_H):
     def forward(self, x):
         x_recon, mu, logvar = self._reconstruct(x)
 
-        recon_loss = reconstruction_loss(x, x_recon, self.decoder_dist, reduce_mode=self.loss_reduce_mode)
+        recon_loss = reconstruction_loss(x, x_recon, self.decoder_dist, reduce_mode=self.loss_reduction)
         total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
-        if self.loss_reduce_mode == "sum": kl = total_kld
-        elif self.loss_reduce_mode == "mean": kl == mean_kld
+        if self.loss_reduction == "sum": kl = total_kld
+        elif self.loss_reduction == "mean": kl == mean_kld
         
         C = self.get_C()
         beta_vae_loss = recon_loss + self.beta*(kl - C).abs()

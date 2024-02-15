@@ -115,7 +115,7 @@ class ModelsZoo:
     def get_VAE_deep(config):
         if config is None: config = {}
         model_config = {
-            "latent_dim": 15*32,
+            "latent_dim": 16*32,
             "beta": 2,
             "input_dim": (3, 128),
             "latent_std": 1,
