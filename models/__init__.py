@@ -2,7 +2,7 @@ import os
 import wandb
 import torch
 
-from .modules import encoder_conv, decoder_conv, encoder_conv4, decoder_conv4
+from .modules import encoder_conv, decoder_conv, encoder_conv_bVAE, decoder_conv_bVAE
 from .VAE import VAE, BetaVAE_H, BetaVAE_B
 from .AE import AE, AE_framework
 from .UNet import UNet
@@ -123,12 +123,12 @@ class ModelsZoo:
             "n_classes": 3,
             "first_decoder_conv_depth": 32,
             "loss_reduction" : "mean", #"mean"/"sum
-            "model_description": "depr. anon., beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
+            "model_description": "beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
         }
         model_config.update(config)
         model = VAE(
-            encoder_conv4(model_config["n_channels"]),
-            decoder_conv4(model_config["n_classes"]),
+            encoder_conv_bVAE(model_config["n_channels"]),
+            decoder_conv_bVAE(model_config["n_classes"]),
             **model_config
         )
         return model, model_config

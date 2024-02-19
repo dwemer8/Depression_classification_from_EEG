@@ -1,3 +1,5 @@
+import time
+
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -94,6 +96,7 @@ def train_eval(
         buffer_cnt = 0
         values_keys = []
 
+        start_epoch_time = time.time()
         for step, imgs in enumerate(dataloader):
             #masking
             if is_mask: imgs_masked = mask_chunks(imgs, mask_ratio=mask_ratio)
@@ -224,6 +227,8 @@ def train_eval(
             #plotting
             if (plot_period is not None and step % plot_period == 0) or\
             (plot_steps is not None and step in plot_steps):
+                start_plotting_time = time.time()
+                
                 if buffer_cnt >= buffer_max:
                     clear_output(wait=True)
                     buffer_cnt = 0
@@ -232,13 +237,13 @@ def train_eval(
                 print(f"Epoch {epoch}, step {step}")
 
                 #pca embeddnigs
-                print("Plotting PCA...")
+                if verbose - 1 > 0: print("Plotting PCA...")
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
                 fig, ax = plt.subplots(1, 2, figsize=(12, 3))
                 plotData(X, y, method="pca", ax=ax[0], plot_type=plot_type)
                 
                 #plot reconstruction
-                print("Plotting reconstruction...")
+                if verbose - 1 > 0: print("Plotting reconstruction...")
                 ax[1].plot(imgs[0].squeeze()[0], label="data", color="b", marker="o")
                 if mode == "train": model.eval()
                 imgs_reconstructed = model.reconstruct(imgs.to(device))
@@ -246,22 +251,34 @@ def train_eval(
                 ax[1].plot(imgs_reconstructed[0].squeeze()[0].detach().cpu(), label="approximation", color="r")
                 plt.show()
 
+                end_plotting_time = time.time()
+                if verbose - 2 > 0: print(f"Plotting time: {end_plotting_time - start_plotting_time} s")
+
             #classifier/regressor metrics evaluation
             if (check_period is not None and step % check_period == 0) or\
             (check_steps is not None and step in check_steps):
+                start_evaluation_time = time.time()
+                
                 if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
 
                 if verbose - 1 > 0: print("Classifier/regressor metrics evaluation...")
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
+                if verbose - 2 > 0: print("Embeddings shape:", X.shape)
                 results = {}
                 for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
                     results[tag] = (func(X, y, ml_model, ml_param_grid, **kwargs))
                 logger.update_other({ml_metric_prefix: results})
 
+                end_evaluation_time = time.time()
+                if verbose - 2 > 0: print(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s")
+
             #break
             if step_max is not None and step >= step_max:
                 break
 
+        end_epoch_time = time.time()
+        if verbose - 2 > 0: print(f"Epoch time: {end_epoch_time - start_epoch_time} s")
+        
         #logging final results
         logger.average()
         if optimizer is not None: logger._append("lr", optimizer.param_groups[0]['lr'])

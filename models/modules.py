@@ -199,7 +199,7 @@ class decoder_conv(torch.nn.Module):
 
         return output
 
-class encoder_conv4(torch.nn.Module):
+class encoder_conv_bVAE(torch.nn.Module):
     def __init__(
         self, 
         n_channels
@@ -217,9 +217,9 @@ class encoder_conv4(torch.nn.Module):
         x2 = self.down1(x1)
         x3 = self.down2(x2)
         x4 = self.down3(x3)
-        return x4.reshape(x.shape[0], -1) #B * 15*64
+        return x4
 
-class decoder_conv4(torch.nn.Module):
+class decoder_conv_bVAE(torch.nn.Module):
     def __init__(
         self, 
         n_classes

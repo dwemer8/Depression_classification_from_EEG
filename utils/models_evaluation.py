@@ -62,7 +62,6 @@ def evaluateClassifier(
         print("Best classifier:")
         print("Parameters:", clf.best_params_)
         print("Score:", clf.best_score_)
-        print(f"Train accuracy: {accuracy_train}")
     
     if verbose > 0: print("Evaluation on the test data")
     estimates_test = evaluate(clf.best_estimator_, X_test, y_test)

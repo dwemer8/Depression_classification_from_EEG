@@ -40,6 +40,9 @@ def printLog(s, logfile=None):
         print(s, file=logfile)
 
 def upd(config, d):
+    '''
+    It updates only existing keys!!!
+    '''
     config = deepcopy(config)
     for k, v in config.items():
         if k in d:
@@ -54,6 +57,9 @@ class Config():
         self.config = config
 
     def upd(self, d):
+        '''
+        It updates only existing keys!!!
+        '''
         config = deepcopy(self.config)
         for k, v in config.items():
             if k in d:

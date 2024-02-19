@@ -87,8 +87,8 @@ def evaluateMetrics(
     verbose=1, 
     n_bootstraps=1000,
     alpha=0.05,
-    metrics_for_CI = [(average_precision_score, "soft"), (accuracy_score, "hard")],
-    metrics = [(average_precision_score, "soft"), (accuracy_score, "hard")],
+    metrics_for_CI = [],# [(average_precision_score, "soft"), (accuracy_score, "hard")],
+    metrics = [],#[(average_precision_score, "soft"), (accuracy_score, "hard")],
 ):
     estimates = {}
     y_pred = y_prob > threshold

@@ -24,12 +24,13 @@ class VAE(torch.nn.Module):
         self.loss_reduction = args["loss_reduction"] #sum or mean
         
     def _encode(self, imgs):
-        z_params = self.encoder(imgs)
+        z_params = self.encoder(imgs).reshape(imgs.shape[0], -1)
         z_mean, z_log_std = torch.split(z_params, [self.Z_DIM, self.Z_DIM], dim=1)
         return z_mean, z_log_std
 
     def encode(self, imgs):
-        return self._encode(imgs)[0]
+        # return self._encode(imgs)[0]
+        return self.encoder(imgs)
 
     def decode(self, z):
         return self.decoder(z)
