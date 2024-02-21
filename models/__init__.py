@@ -2,10 +2,11 @@ import os
 import wandb
 import torch
 
-from .modules import encoder_conv, decoder_conv, encoder_conv_bVAE, decoder_conv_bVAE
+from .modules import encoder_conv, decoder_conv, encoder_conv_bVAE, decoder_conv_bVAE, ConvEncoder, ConvDecoder
 from .VAE import VAE, BetaVAE_H, BetaVAE_B
 from .AE import AE, AE_framework
 from .UNet import UNet
+from utils.common import upd
 
 def get_model(model_config):
     model, config = getattr(ModelsZoo, "get_" + model_config["model"])(model_config)
@@ -115,14 +116,19 @@ class ModelsZoo:
     def get_VAE_deep(config):
         if config is None: config = {}
         model_config = {
+            #for framework
             "latent_dim": 16*32,
             "beta": 2,
             "input_dim": (3, 128),
-            "latent_std": 1,
-            "n_channels": 3,
-            "n_classes": 3,
             "first_decoder_conv_depth": 32,
             "loss_reduction" : "mean", #"mean"/"sum
+
+            #for encoder end decoder
+            "n_channels": 3,
+            "n_classes": 3,
+
+            #for log only
+            "latent_std": 1,
             "model_description": "beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
         }
         model_config.update(config)
@@ -130,6 +136,47 @@ class ModelsZoo:
             encoder_conv_bVAE(model_config["n_channels"]),
             decoder_conv_bVAE(model_config["n_classes"]),
             **model_config
+        )
+        return model, model_config
+
+    def get_VAE_parametrized(config):
+        if config is None: config = {}
+        framework_config = {
+            "latent_dim": 16*32,
+            "beta": 2,
+            "input_dim": (3, 128),
+            "first_decoder_conv_depth": 32,
+            "loss_reduction" : "mean", #"mean"/"sum
+        }
+        encoder_config = {
+            "down_blocks_config": [
+                {"in_channels": 3, "out_channels": 4, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
+            ],
+            "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+        }
+        decoder_config = {
+            "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+            "up_blocks_config": [
+                {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid"},
+            ],
+        }
+        model_config = {
+            "framework": framework_config,
+            "encoder": encoder_config,
+            "decoder": decoder_config,
+            "model_description": "beta-VAE",
+            "model": "VAE_parametrized",
+            "loss_reduction" : "mean", #"mean"/"sum #for compatibility with train function
+        }
+        model_config = upd(model_config, config)
+        model = VAE(
+            ConvEncoder(**model_config["encoder"]),
+            ConvDecoder(**model_config["decoder"]),
+            **model_config["framework"],
         )
         return model, model_config
     

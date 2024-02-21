@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+import typing as t
+import numpy as np
 
 ###############
 # simple blocks
@@ -19,81 +21,86 @@ def conv_transpose_block(in_features: int, out_features: int, kernel=(3, 3), str
         nn.ConvTranspose2d(in_features, out_features, kernel, stride=stride, output_padding=output_padding),
     )
 
-class OutConv(nn.Module):
+class NConv(nn.Module):
+    """(convolution => [BN] => ReLU) * N"""
+
+    def __init__(
+        self, 
+        n_convs:int=None, 
+        in_channels:int=None, 
+        out_channels:t.Union[int, t.List[int]]=None, 
+        kernel_size:t.Union[int, t.List[int]]=7, 
+        activation:str="Sigmoid", 
+        normalize_last:bool=True
+    ):
+        super().__init__()
+        
+        assert isinstance(out_channels, int) or len(out_channels)==n_convs, "Length ouf out_channels list should be equal to n_convs"
+        assert isinstance(kernel_size, int) or len(kernel_size)==n_convs, "Length ouf kernel_size list should be equal to n_convs"
+        
+        modules = []
+        if isinstance(out_channels, int): out_channels = np.array([out_channels]*n_convs)
+        if isinstance(kernel_size, int): kernel_size = np.array([kernel_size]*n_convs)
+        padding = (kernel_size - 1)//2
+        
+        for stage in range(n_convs - 1):
+            modules.extend([
+                nn.Conv1d(in_channels if stage==0 else out_channels[stage - 1], out_channels[stage], kernel_size=kernel_size[stage], padding=padding[stage]),
+                nn.BatchNorm1d(out_channels[stage]),
+                getattr(nn, activation)(),
+            ])
+            
+        modules.append(nn.Conv1d(in_channels if n_convs==1 else out_channels[n_convs-2], out_channels[n_convs-1], kernel_size=kernel_size[n_convs-1], padding=padding[n_convs-1]))
+        if normalize_last:
+            modules.extend([
+                nn.BatchNorm1d(out_channels[n_convs-1]),
+                getattr(nn, activation)(),
+            ])
+            
+        self.conv = nn.Sequential(*modules) #conv name for backward compatibility (and here should be double_conv for very old versions)
+
+    def forward(self, x):
+        return self.conv(x)
+
+class DoubleConv(NConv):
+    """
+    (convolution => [BN] => ReLU) * 2
+    Left for backward compatibility, all new code should use NConv
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
+        super().__init__(2, in_channels, out_channels, kernel_size=kernel_size, activation=activation, normalize_last=True)
+
+class TripleConv(NConv):
+    """
+    (convolution => [BN] => ReLU) * 3
+    Left for backward compatibility, all new code should use NConv
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
+        super().__init__(3, in_channels, out_channels, kernel_size=kernel_size, activation=activation, normalize_last=True)
+
+class OutConv(NConv):
+    """
+    Left for backward compatibility, all new code should use NConv.
+    """
     def __init__(self, in_channels, out_channels, kernel_size):
-        super(OutConv, self).__init__()
-        padding = int((kernel_size - 1) / 2)
-        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding, bias=True)
+        super().__init(1, in_channels, out_channels, kernel_size=kernel_size, normalize_last=False)
 
-    def forward(self, x):
-        return self.conv(x)
-
-class DoubleConv(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
-
-    def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
-        super().__init__()
-        padding = int((kernel_size - 1) / 2)
-
-        self.conv = nn.Sequential( # for old versions: double_conv
-            nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-            
-            nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-        )
-
-    def forward(self, x):
-        return self.conv(x) # for old versions: double_conv
-
-class TripleConv(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
-
-    def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
-        super().__init__()
-        padding = int((kernel_size - 1) / 2)
-
-        self.conv = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-            
-            nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-            
-            nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-        )
-
-    def forward(self, x):
-        return self.conv(x)
-
-class OutDoubleConv(nn.Module):
-    """(convolution => [BN] => ReLU) => convolution"""
-
-    def __init__(self, in_channels, out_channels,kernel_size=7, activation="PReLU"):
-        super().__init__()
-        padding = int((kernel_size - 1) / 2)
-
-        self.double_conv = nn.Sequential(
-            nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
-            nn.BatchNorm1d(out_channels),
-            getattr(nn, activation)(),
-            nn.Conv1d(out_channels, out_channels, kernel_size=kernel_size, padding=padding),
-        )
-
-    def forward(self, x):
-        return self.double_conv(x)
+class OutDoubleConv(NConv):
+    """
+    (convolution => [BN] => ReLU) => convolution
+    Left for backward compatibility, all new code should use NConv.
+    Previous version used self.double_conv instead of conv.
+    """
+    def __init__(self, in_channels, out_channels, kernel_size):
+        super().__init(2, in_channels, out_channels, kernel_size=kernel_size, normalize_last=False)
 
 class Down(nn.Module):
-    """Downscaling with maxpool then double conv"""
-    def __init__(self, in_channels, out_channels, kernel_size):
+    """
+    Downscaling with maxpool then double conv
+    """
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, n_convs=2, activation="Sigmoid"):
         super().__init__()
-        self.conv = DoubleConv(in_channels, out_channels, kernel_size)
+        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation)
         self.maxpool = nn.MaxPool1d(2)
 
         #for old versions 
@@ -119,7 +126,7 @@ class Down_with_sc(Down):
 class Up(nn.Module):
     """Upscaling then double conv"""
 
-    def __init__(self, in_channels, out_channels, kernel_size, bilinear=True):
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, n_convs=2, activation="Sigmoid"):
         super().__init__()
 
         # if bilinear, use the normal convolutions to reduce the number of channels
@@ -129,7 +136,7 @@ class Up(nn.Module):
         else:
             self.up = nn.ConvTranspose1d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
 
-        self.conv = DoubleConv(in_channels, out_channels, kernel_size)
+        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation)
 
     def forward(self, x1):
         x = self.up(x1)
@@ -137,8 +144,8 @@ class Up(nn.Module):
 
 class Up_with_sc(Up):
     """Upscaling then double conv"""
-    def __init__(self, in_channels, out_channels, kernel_size, bilinear=True, concat=True):
-        super().__init__(in_channels, out_channels, kernel_size, bilinear)
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, concat=True, n_convs=2, activation="Sigmoid"):
+        super().__init__(in_channels, out_channels, kernel_size, bilinear, n_convs, activation=activation)
         self.concat = concat
 
     def forward(self, x, skip=None):
@@ -238,3 +245,33 @@ class decoder_conv_bVAE(torch.nn.Module):
         x = self.up3(x)
         logits = self.outc(x)
         return logits
+
+class ConvEncoder(nn.Module):
+    def __init__(
+        self,
+        down_blocks_config:t.List[t.Dict] = None,
+        out_conv_config:t.Optional[t.Dict] = None
+    ):
+        super().__init__()
+        modules = []
+        for params in down_blocks_config: modules.append(Down(**params))
+        if out_conv_config is not None: modules.append(NConv(**out_conv_config))
+        self.conv = nn.Sequential(*modules)
+
+    def forward(self, x:torch.Tensor):
+        return self.conv(x)
+
+class ConvDecoder(nn.Module):
+    def __init__(
+        self,
+        up_blocks_config:t.List[t.Dict] = None,
+        in_conv_config:t.Optional[t.Dict] = None
+    ):
+        super().__init__()
+        modules = []
+        if in_conv_config is not None: modules.append(NConv(**in_conv_config))
+        for params in up_blocks_config: modules.append(Up(**params))
+        self.conv = nn.Sequential(*modules)
+
+    def forward(self, x:torch.Tensor):
+        return self.conv(x)

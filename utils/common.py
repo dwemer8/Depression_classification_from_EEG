@@ -46,7 +46,7 @@ def upd(config, d):
     config = deepcopy(config)
     for k, v in config.items():
         if k in d:
-            if isinstance(v, dict):
+            if isinstance(v, dict) and isinstance(d[k], dict):
                 config[k] = upd(v, d[k])
             else:
                 config[k] = d[k]
@@ -63,7 +63,7 @@ class Config():
         config = deepcopy(self.config)
         for k, v in config.items():
             if k in d:
-                if isinstance(v, dict):
+                if isinstance(v, dict) and isinstance(d[k], dict):
                     config[k] = upd(v, d[k])
                 else:
                     config[k] = d[k]
