@@ -19,7 +19,6 @@ class VAE(torch.nn.Module):
         self.decoder = decoder
         self.Z_DIM = args["latent_dim"]
         self.beta = args["beta"]
-        self.input_dim = args["input_dim"]
         self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss redicing
         self.loss_reduction = args["loss_reduction"] #sum or mean
         
@@ -140,7 +139,6 @@ class BetaVAE_H(nn.Module):
     def __init__(self, encoder, decoder, **args):
         super(BetaVAE_H, self).__init__()
         
-        self.input_dim = args["input_dim"]
         self.z_dim = args["latent_dim"]
         self.beta = args["beta"]
         self.decoder_dist = "gaussian" #"gaussian"/"bernoulli"

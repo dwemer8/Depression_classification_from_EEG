@@ -37,7 +37,6 @@ class ModelsZoo:
         model_config = {
             "latent_dim": 10,
             "beta": 2,
-            "input_dim": (1, 3, 128),
             "latent_std": 1,
             "latent_multiplier" : 2,
             "loss_reduction" : "mean", #"mean"/"sum,
@@ -56,7 +55,6 @@ class ModelsZoo:
         model_config = {
             "latent_dim": 10,
             "beta": 100,
-            "input_dim": (1, 3, 128),
             "latent_std": 1,
             "C_max": 100,
             "C_stop_iter": len(train_dataloader)*50,
@@ -78,7 +76,6 @@ class ModelsZoo:
         model_config = {
             "latent_dim": 10,
             "beta": 2,
-            "input_dim": (1, 3, 128),
             "latent_std": 1,
             "latent_multiplier" : 2,
             "loss_reduction" : "mean", #"mean"/"sum
@@ -119,7 +116,6 @@ class ModelsZoo:
             #for framework
             "latent_dim": 16*32,
             "beta": 2,
-            "input_dim": (3, 128),
             "first_decoder_conv_depth": 32,
             "loss_reduction" : "mean", #"mean"/"sum
 
@@ -144,7 +140,6 @@ class ModelsZoo:
         framework_config = {
             "latent_dim": 16*32,
             "beta": 2,
-            "input_dim": (3, 128),
             "first_decoder_conv_depth": 32,
             "loss_reduction" : "mean", #"mean"/"sum
         }
@@ -168,9 +163,10 @@ class ModelsZoo:
             "framework": framework_config,
             "encoder": encoder_config,
             "decoder": decoder_config,
+            
             "model_description": "beta-VAE",
             "model": "VAE_parametrized",
-            "loss_reduction" : "mean", #"mean"/"sum #for compatibility with train function
+            "loss_reduction" : framework_config["loss_reduction"],  #for compatibility with train function
         }
         model_config = upd(model_config, config)
         model = VAE(
@@ -193,6 +189,45 @@ class ModelsZoo:
         model = AE(
             n_channels=model_config["n_channels"],
             n_classes=model_config["n_classes"],
+        )
+        return model, model_config
+
+    def get_AE_parametrized(config):
+        if config is None: config = {}
+        framework_config = {
+            "first_decoder_conv_depth": 32,
+            "loss_reduction" : "mean", #"mean"/"sum
+        }
+        encoder_config = {
+            "down_blocks_config": [
+                {"in_channels": 3, "out_channels": 4, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
+            ],
+            "out_conv_config": {"in_channels": 16, "out_channels": 32, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+        }
+        decoder_config = {
+            "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+            "up_blocks_config": [
+                {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid"},
+            ],
+        }
+        model_config = {
+            "framework": framework_config,
+            "encoder": encoder_config,
+            "decoder": decoder_config,
+            
+            "model_description": "AE",
+            "model": "AE_parametrized",
+            "loss_reduction" : framework_config["loss_reduction"],  #for compatibility with train function
+        }
+        model_config = upd(model_config, config)
+        model = AE_framework(
+            ConvEncoder(**model_config["encoder"]),
+            ConvDecoder(**model_config["decoder"]),
+            **model_config["framework"],
         )
         return model, model_config
     

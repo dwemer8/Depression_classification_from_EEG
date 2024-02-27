@@ -45,10 +45,8 @@ class AE_framework(torch.nn.Module):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.Z_DIM = args["latent_dim"]
-        self.input_dim = args["input_dim"]
-        self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss redicing
-        self.loss_reduce_mode = args["loss_reduce_mode"] #sum or mean
+        self.first_decoder_conv_depth = args.get("first_decoder_conv_depth", None) #also affect loss redicing
+        self.loss_reduction = args["loss_reduction"] #sum or mean
         
     def _encode(self, imgs):
         return self.encoder(imgs)
@@ -73,9 +71,9 @@ class AE_framework(torch.nn.Module):
 
         if self.first_decoder_conv_depth is not None: reduce_dims = [1, 2]
         else: reduce_dims = [1, 2, 3]
-        if self.loss_reduce_mode == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
-        elif self.loss_reduce_mode == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
-        else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduce_mode}")
+        if self.loss_reduction == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
+        elif self.loss_reduction == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
+        else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduction}")
         log_p_x_given_z = -err
         loss = -log_p_x_given_z
 
