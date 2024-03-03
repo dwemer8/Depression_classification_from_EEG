@@ -45,8 +45,15 @@ class AE_framework(torch.nn.Module):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
-        self.first_decoder_conv_depth = args.get("first_decoder_conv_depth", None) #also affect loss redicing
-        self.loss_reduction = args["loss_reduction"] #sum or mean
+        self.loss_reduction = args.get("loss_reduction", "mean") #sum or mean
+        self.z_n_channels = args.get("z_n_channels", None)
+        self.loss_reduction_dims = args.get("loss_reduction_dims", [1, 2])
+
+        self.first_decoder_conv_depth = args.get("first_decoder_conv_depth", None) #deprecated, also affect loss reduction
+        if self.first_decoder_conv_depth is not None:
+            print("WARNING:z_n_channels and loss_reduction_dims parameters were overwritten due to usage of deprecated parameter first_decoder_conv_depth")
+            self.z_n_channels = self.first_decoder_conv_depth
+            self.loss_reduction_dims = [1, 2]
         
     def _encode(self, imgs):
         return self.encoder(imgs)
@@ -59,7 +66,7 @@ class AE_framework(torch.nn.Module):
 
     def _reconstruct(self, imgs):
         z = self._encode(imgs)
-        if self.first_decoder_conv_depth is not None: z = z.reshape(imgs.shape[0], self.first_decoder_conv_depth, -1) #for 4-layer beta-VAE
+        if self.z_n_channels is not None: z = z.reshape(imgs.shape[0], self.z_n_channels, -1) #for 4-layer beta-VAE
         decoded_imgs = self.decode(z)
         return decoded_imgs, z
     
@@ -68,11 +75,8 @@ class AE_framework(torch.nn.Module):
 
     def forward(self, imgs):
         decoded_imgs, z = self._reconstruct(imgs)
-
-        if self.first_decoder_conv_depth is not None: reduce_dims = [1, 2]
-        else: reduce_dims = [1, 2, 3]
-        if self.loss_reduction == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
-        elif self.loss_reduction == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
+        if self.loss_reduction == "sum": err = ((imgs - decoded_imgs)**2).sum(self.loss_reduction_dims) #for 4-layer beta-VAE 
+        elif self.loss_reduction == "mean" : err = ((imgs - decoded_imgs)**2).mean(self.loss_reduction_dims)
         else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduction}")
         log_p_x_given_z = -err
         loss = -log_p_x_given_z

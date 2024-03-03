@@ -2,7 +2,15 @@ import os
 import wandb
 import torch
 
-from .modules import encoder_conv, decoder_conv, encoder_conv_bVAE, decoder_conv_bVAE, ConvEncoder, ConvDecoder
+from .modules import \
+    encoder_conv, \
+    decoder_conv, \
+    encoder_conv_bVAE, \
+    decoder_conv_bVAE, \
+    ConvEncoder, \
+    ConvDecoder, \
+    TransformerEncoder, \
+    TransformerDecoder
 from .VAE import VAE, BetaVAE_H, BetaVAE_B
 from .AE import AE, AE_framework
 from .UNet import UNet
@@ -149,14 +157,14 @@ class ModelsZoo:
                 {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
                 {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
             ],
-            "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+            "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False},
         }
         decoder_config = {
             "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
             "up_blocks_config": [
                 {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
                 {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
-                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False},
             ],
         }
         model_config = {
@@ -204,14 +212,14 @@ class ModelsZoo:
                 {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
                 {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
             ],
-            "out_conv_config": {"in_channels": 16, "out_channels": 32, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+            "out_conv_config": {"in_channels": 16, "out_channels": 32, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False},
         }
         decoder_config = {
             "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
             "up_blocks_config": [
                 {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
                 {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
-                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid"},
+                {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False},
             ],
         }
         model_config = {
@@ -227,6 +235,44 @@ class ModelsZoo:
         model = AE_framework(
             ConvEncoder(**model_config["encoder"]),
             ConvDecoder(**model_config["decoder"]),
+            **model_config["framework"],
+        )
+        return model, model_config
+
+    def get_transformer_AE_parametrized(config):
+        if config is None: config = {}
+        framework_config = {
+            "loss_reduction" : "mean", #"mean"/"sum
+        }
+        encoder_config = {
+            "down_blocks_config": [
+                {"input_dim": 128, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm"},
+                {"input_dim": 64, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm"},
+                {"input_dim": 32, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm"},
+            ],
+            "out_block_config": {"dim": 16, "num_heads": 1, "mlp_ratio": 4, "mlp_depth": 2, "p_dropout": 0.1, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
+        }
+        decoder_config = {
+            "in_block_config": {"dim": 16, "num_heads": 1, "mlp_ratio": 4, "mlp_depth": 2, "p_dropout": 0.1, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
+            "up_blocks_config": [
+                {"input_dim": 16, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm"},
+                {"input_dim": 32, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm"},
+                {"input_dim": 64, "seq_length": 3, "num_heads": 1, "depth": 1, "mlp_depth": 2, "mlp_ratio": 4, "p_dropout":0.1, "act_layer": 'PReLU', "norm_layer": "LayerNorm", "with_outro": True}
+            ],
+        }
+        model_config = {
+            "framework": framework_config,
+            "encoder": encoder_config,
+            "decoder": decoder_config,
+            
+            "model_description": "transformer AE",
+            "model": "transformer_AE_parametrized",
+            "loss_reduction" : framework_config["loss_reduction"],  #for compatibility with train function
+        }
+        model_config = upd(model_config, config)
+        model = AE_framework(
+            TransformerEncoder(**model_config["encoder"]),
+            TransformerDecoder(**model_config["decoder"]),
             **model_config["framework"],
         )
         return model, model_config

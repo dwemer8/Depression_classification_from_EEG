@@ -94,13 +94,48 @@ class OutDoubleConv(NConv):
     def __init__(self, in_channels, out_channels, kernel_size):
         super().__init(2, in_channels, out_channels, kernel_size=kernel_size, normalize_last=False)
 
+class MultiHeadAttention(nn.Module):
+    def __init__(self, dim, num_heads=8):
+        super().__init__()
+        if dim % num_heads:
+            raise ValueError('dim % num_heads != 0')
+        self.dim = dim
+        self.num_heads = num_heads
+        self.head_dim = dim // num_heads
+        self.scale = self.head_dim ** -0.5
+        self.qkv = nn.Linear(dim, dim * 3, bias=False)
+        self.proj = nn.Linear(dim, dim)
+
+    def forward(self, x):
+        '''
+        Args: 
+            x: Tensor of shape (batch_size, seq_len, input_dim)
+            
+        Returns:
+            Tensor of shape (batch_size, seq_len, input_dim)
+        '''
+        B, N, C = x.shape
+        qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, self.head_dim).permute(2, 0, 3, 1, 4) # qkv: 3 × B × num_heads × N × head_dim
+        q, k, v = qkv.unbind(0)
+        q = q * self.scale
+        attn = q @ k.transpose(-2, -1)
+        attn = attn.softmax(dim=-1)
+        x = attn @ v  # attn: B × num_heads × N × N    v: B × num_heads × N × head_dim -> B × num_heads × N × head_dim
+        x = x.transpose(1, 2).reshape(B, N, C) # B × N × (num_heads × head_dim)
+        x = self.proj(x)
+        return x
+
+################
+# complex blocks
+################
+
 class Down(nn.Module):
     """
     Downscaling with maxpool then double conv
     """
-    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, n_convs=2, activation="Sigmoid"):
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, n_convs=2, activation="Sigmoid", normalize_last=True):
         super().__init__()
-        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation)
+        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation, normalize_last=normalize_last)
         self.maxpool = nn.MaxPool1d(2)
 
         #for old versions 
@@ -126,7 +161,7 @@ class Down_with_sc(Down):
 class Up(nn.Module):
     """Upscaling then double conv"""
 
-    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, n_convs=2, activation="Sigmoid"):
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, n_convs=2, activation="Sigmoid", normalize_last=True):
         super().__init__()
 
         # if bilinear, use the normal convolutions to reduce the number of channels
@@ -136,16 +171,17 @@ class Up(nn.Module):
         else:
             self.up = nn.ConvTranspose1d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
 
-        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation)
+        self.conv = NConv(n_convs, in_channels, out_channels, kernel_size=kernel_size, activation=activation, normalize_last=normalize_last)
 
     def forward(self, x1):
         x = self.up(x1)
         return self.conv(x)
 
+
 class Up_with_sc(Up):
     """Upscaling then double conv"""
-    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, concat=True, n_convs=2, activation="Sigmoid"):
-        super().__init__(in_channels, out_channels, kernel_size, bilinear, n_convs, activation=activation)
+    def __init__(self, in_channels=None, out_channels=None, kernel_size=None, bilinear=True, concat=True, n_convs=2, activation="Sigmoid", normalize_last=True):
+        super().__init__(in_channels, out_channels, kernel_size, bilinear, n_convs, activation=activation, normalize_last=normalize_last)
         self.concat = concat
 
     def forward(self, x, skip=None):
@@ -156,9 +192,143 @@ class Up_with_sc(Up):
         x2 = self.up(x1)
         return self.conv(x2)
 
-################
-# complex blocks
-################
+
+class TransformerBlock(nn.Module):
+    def __init__(
+        self,
+        dim:int=None,
+        num_heads:int=None,
+        mlp_ratio:int=4,  # ratio between hidden_dim and input_dim in MLP,
+        mlp_depth:int=2,
+        p_dropout:float=0.1,
+        act_layer:str="PReLU",
+        norm_layer:str="LayerNorm"
+    ):
+        super().__init__()
+        
+        self.norm1 = getattr(nn, norm_layer)(dim)
+        self.attn = MultiHeadAttention(dim, num_heads=num_heads)
+        self.norm2 = getattr(nn, norm_layer)(dim)
+        
+        mlp_layers = []
+        for i in range(mlp_depth):
+            mlp_layers.extend([
+                nn.Linear(dim * mlp_ratio if i != 0 else dim, dim * mlp_ratio if i != mlp_depth-1 else dim), 
+                nn.Dropout(p=p_dropout),
+            ])
+            if i != mlp_depth-1: mlp_layers.append(getattr(nn, act_layer)())
+        self.mlp = nn.Sequential(*mlp_layers)
+
+    def forward(self, x):
+        x = self.norm1(x + self.attn(x))
+        x = self.norm2(x + self.mlp(x))
+        return x
+
+
+class DownTransformer(nn.Module):
+    """
+    Downscaling with maxpool then transformer
+    """
+
+    def __init__(
+        self,
+        input_dim:int=128,
+        seq_length:int=3,
+        num_heads:int=1,
+        depth:int=1,
+        mlp_depth:int=2,
+        mlp_ratio:int=4,
+        p_dropout:float=0.1,
+        act_layer:str='PReLU',
+        norm_layer:str='LayerNorm',
+        with_outro:bool=False,
+    ):
+        super().__init__()
+
+        self.dim = input_dim
+        self.seq_lengh = seq_length
+        self.with_outro = with_outro
+        
+        self.maxpool = nn.MaxPool1d(2)
+        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_lengh, self.dim) * .02)
+        self.blocks = nn.Sequential(*[
+            TransformerBlock(
+                dim=self.dim, 
+                num_heads=num_heads, 
+                mlp_ratio=mlp_ratio, 
+                mlp_depth=mlp_depth,
+                p_dropout=p_dropout, 
+                act_layer=act_layer, 
+                norm_layer=norm_layer,
+            ) for _ in range(depth)
+        ])
+        if self.with_outro: self.outro = nn.Linear(self.dim*self.seq_lengh, self.dim*self.seq_lengh)
+    
+    def forward(self, x): #B, C, N
+        x += self.pos_embed #B, C, N
+        x = self.blocks(x) #B, C, N
+        if self.with_outro:
+            x = x.reshape(-1, self.seq_lengh*self.dim)
+            x = self.outro(x) 
+            x = x.reshape(-1, self.seq_lengh, self.dim)
+
+        x = self.maxpool(x) #B, C, N//2
+        return x
+
+
+class UpTransformer(nn.Module):
+    """Upscaling then transformer"""
+
+    def __init__(
+        self,
+        input_dim:int=128,
+        seq_length:int=3,
+        num_heads:int=1,
+        depth:int=1,
+        mlp_depth:int=2,
+        mlp_ratio:int=4,
+        p_dropout:float=0.1,
+        act_layer:str='PReLU',
+        norm_layer:str='LayerNorm',
+        with_outro:bool=False,
+        bilinear=True,
+    ):
+        super().__init__()
+
+        self.dim = input_dim*2
+        self.seq_lengh = seq_length
+        self.with_outro = with_outro
+
+        # if bilinear, use the normal convolutions to reduce the number of channels
+        if bilinear: self.up = nn.Upsample(scale_factor=2, mode='linear', align_corners=False)
+        else: self.up = nn.ConvTranspose1d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
+        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_lengh, self.dim) * .02)
+        self.blocks = nn.Sequential(*[
+            TransformerBlock(
+                dim=self.dim, 
+                num_heads=num_heads, 
+                mlp_ratio=mlp_ratio, 
+                mlp_depth=mlp_depth,
+                p_dropout=p_dropout, 
+                act_layer=act_layer, 
+                norm_layer=norm_layer,
+            ) for _ in range(depth)
+        ])
+        if self.with_outro: self.outro = nn.Linear(self.dim*self.seq_lengh, self.dim*self.seq_lengh)
+    
+    def forward(self, x): #B, C, N
+        x = self.up(x) #B, C, N*2
+        x += self.pos_embed #B, C, N*2
+        x = self.blocks(x) #B, C, N*2
+        if self.with_outro:
+            x = x.reshape(-1, self.seq_lengh*self.dim)
+            x = self.outro(x) 
+            x = x.reshape(-1, self.seq_lengh, self.dim)
+        return x
+
+#########
+# subnets
+#########
 
 class encoder_conv(torch.nn.Module):
     def __init__(self, args):
@@ -205,6 +375,7 @@ class decoder_conv(torch.nn.Module):
         output = self.conv_layers(h1)
 
         return output
+        
 
 class encoder_conv_bVAE(torch.nn.Module):
     def __init__(
@@ -245,6 +416,7 @@ class decoder_conv_bVAE(torch.nn.Module):
         x = self.up3(x)
         logits = self.outc(x)
         return logits
+        
 
 class ConvEncoder(nn.Module):
     def __init__(
@@ -275,3 +447,34 @@ class ConvDecoder(nn.Module):
 
     def forward(self, x:torch.Tensor):
         return self.conv(x)
+        
+
+class TransformerEncoder(nn.Module):
+    def __init__(
+        self,
+        down_blocks_config:t.List[t.Dict] = None,
+        out_block_config:t.Optional[t.Dict] = None
+    ):
+        super().__init__()
+        modules = []
+        for params in down_blocks_config: modules.append(DownTransformer(**params))
+        if out_block_config is not None: modules.append(TransformerBlock(**out_block_config))
+        self.blocks = nn.Sequential(*modules)
+
+    def forward(self, x:torch.Tensor):
+        return self.blocks(x)
+
+class TransformerDecoder(nn.Module):
+    def __init__(
+        self,
+        up_blocks_config:t.List[t.Dict] = None,
+        in_block_config:t.Optional[t.Dict] = None
+    ):
+        super().__init__()
+        modules = []
+        if in_block_config is not None: modules.append(TransformerBlock(**in_block_config))
+        for params in up_blocks_config: modules.append(UpTransformer(**params))
+        self.blocks = nn.Sequential(*modules)
+
+    def forward(self, x:torch.Tensor):
+        return self.blocks(x)

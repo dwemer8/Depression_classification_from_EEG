@@ -346,15 +346,15 @@ def getTUABdataset(
     targets_file_name,
     n_channels=3,
     n_samples_per_chunk=128,
-    test_size=0.5,
+    val_size=0.1,
     SEED=SEED,
 ):
-    chunks_train = np.load(TUAB_TRAIN + chunks_file_name + ".npy").reshape(-1, n_channels, n_samples_per_chunk)
-    targets_train = np.load(TUAB_TRAIN + targets_file_name + ".npy")
-    chunks_val_test = np.load(TUAB_EVAL + chunks_file_name + ".npy").reshape(-1, n_channels, n_samples_per_chunk)
-    targets_val_test = np.load(TUAB_EVAL + targets_file_name + ".npy")
+    chunks_train_val = np.load(TUAB_TRAIN + chunks_file_name + ".npy").reshape(-1, n_channels, n_samples_per_chunk)
+    targets_train_val = np.load(TUAB_TRAIN + targets_file_name + ".npy")
+    chunks_test = np.load(TUAB_EVAL + chunks_file_name + ".npy").reshape(-1, n_channels, n_samples_per_chunk)
+    targets_test = np.load(TUAB_EVAL + targets_file_name + ".npy")
     
-    chunks_val, chunks_test, targets_val, targets_test = train_test_split(chunks_val_test, targets_val_test, test_size=test_size, random_state=SEED, shuffle=False)
+    chunks_train, chunks_val, targets_train, targets_val = train_test_split(chunks_train_val, targets_train_val, test_size=val_size, random_state=SEED, shuffle=True)
     
     print(chunks_train.shape, targets_train.shape, chunks_val.shape, targets_val.shape, chunks_test.shape, targets_test.shape)
     
