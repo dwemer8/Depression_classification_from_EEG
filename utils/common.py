@@ -3,6 +3,7 @@ import numpy as np
 import random
 import os
 from copy import deepcopy
+import json
 
 def check_tags(s, tags):
     for tag in tags:
@@ -68,3 +69,14 @@ class Config():
                 else:
                     config[k] = d[k]
         return config
+
+def replace(s, replacements):
+    for substring in replacements: s = s.replace(substring, replacements[substring])
+    return s
+
+def read_json_with_comments(path, replacements=None):
+    f = open(path, "r")
+    lines = list(map(lambda line: line.split("#")[0].replace("\n", ""), f.readlines()))
+    if replacements is not None: lines = list(map(lambda line: replace(line, replacements), lines))
+    lines = "\n".join(lines)
+    return json.loads(lines)

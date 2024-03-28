@@ -22,6 +22,55 @@ def compute_bootstrapped_score(y_test, y_prob, scorer, m_sample=None, stratum_id
         idx_bs = np.random.choice(idx, size=m_sample, replace=True)
     return scorer(y_test[idx_bs], y_prob[idx_bs])
 
+def get_bootstrap_estimates(
+    y_test, 
+    y_prob, 
+    stratum_idx_vals=None, 
+    n_bootstraps=1000, 
+    m_sample=None, 
+    scorer=accuracy_score, 
+    verbose=1, 
+):
+    assert len(y_test) == len(y_prob), "y_test and y_prob should have the same lengths"
+        
+    scores = []
+    if verbose > 0:
+        print("Bootstrap scores computing...")
+        for _ in tqdm(range(n_bootstraps)):
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+    else:
+        for _ in range(n_bootstraps):
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+    return np.array(scores)
+
+def get_bootstrap_estimates_for_metrics(
+    y_test, 
+    y_prob, 
+    msmnt_idx=None, 
+    threshold=0.5, 
+    verbose=1, 
+    n_bootstraps=1000,
+    metrics_for_CI = [],# [(average_precision_score, "soft"), (accuracy_score, "hard")],
+):
+    estimates = {}
+    y_pred = y_prob > threshold
+
+    #computing CIs for metrics
+    for method, method_type in metrics_for_CI:
+        method_name = get_object_name(method)
+        if method_type == "soft": y_pred_ = y_prob
+        elif method_type == "hard": y_pred_ = y_pred
+        estimates[method_name] = get_bootstrap_estimates(
+            y_test, 
+            y_pred_, 
+            stratum_idx_vals=msmnt_idx,
+            n_bootstraps=n_bootstraps, 
+            scorer=method, 
+            verbose=(verbose-1),
+        )
+    
+    return estimates
+
 def evalConfInt(
     y_test, 
     y_prob, 
@@ -38,10 +87,10 @@ def evalConfInt(
     if verbose > 0:
         print("Bootstrap scores computing...")
         for _ in tqdm(range(n_bootstraps)):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals))
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
     else:
         for _ in range(n_bootstraps):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals))
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
     scores = np.array(scores)
     
     perc = sts.norm.ppf(1 - alpha/2)
@@ -108,7 +157,7 @@ def evaluateMetrics(
         if method_type == "soft": y_pred_ = y_prob
         elif method_type == "hard": y_pred_ = y_pred
         est, se = evalConfInt(
-            y_test, y_pred_, msmnt_idx, n_bootstraps=n_bootstraps, alpha=alpha, verbose=(verbose-1), scorer=average_precision_score
+            y_test, y_pred_, msmnt_idx, n_bootstraps=n_bootstraps, alpha=alpha, verbose=(verbose-1), scorer=method
         )
         estimates[method_name + ".bs"] = est
         estimates[method_name + ".se.bs"] = se

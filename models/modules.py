@@ -78,12 +78,22 @@ class TripleConv(NConv):
     def __init__(self, in_channels, out_channels, kernel_size=7, activation="Sigmoid"):
         super().__init__(3, in_channels, out_channels, kernel_size=kernel_size, activation=activation, normalize_last=True)
 
-class OutConv(NConv):
+# class OutConv(NConv):
+#     def __init__(self, in_channels, out_channels, kernel_size):
+#         super().__init__(1, in_channels, out_channels, kernel_size=kernel_size, normalize_last=False)
+    
+class OutConv(nn.Module):
     """
     Left for backward compatibility, all new code should use NConv.
     """
     def __init__(self, in_channels, out_channels, kernel_size):
-        super().__init(1, in_channels, out_channels, kernel_size=kernel_size, normalize_last=False)
+        super(OutConv, self).__init__()
+        padding = int((kernel_size - 1) / 2)
+        self.conv = nn.Conv1d(in_channels, out_channels, kernel_size=kernel_size, padding=padding, bias=True)
+
+    def forward(self, x):
+        return self.conv(x)
+        
 
 class OutDoubleConv(NConv):
     """
@@ -246,11 +256,13 @@ class DownTransformer(nn.Module):
         super().__init__()
 
         self.dim = input_dim
-        self.seq_lengh = seq_length
+        self.seq_length = seq_length
         self.with_outro = with_outro
+        self.num_heads = num_heads
+        self.head_dim = self.dim//num_heads
         
         self.maxpool = nn.MaxPool1d(2)
-        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_lengh, self.dim) * .02)
+        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_length, self.dim) * .02)
         self.blocks = nn.Sequential(*[
             TransformerBlock(
                 dim=self.dim, 
@@ -262,15 +274,18 @@ class DownTransformer(nn.Module):
                 norm_layer=norm_layer,
             ) for _ in range(depth)
         ])
-        if self.with_outro: self.outro = nn.Linear(self.dim*self.seq_lengh, self.dim*self.seq_lengh)
+        if self.with_outro: 
+            self.outro = [nn.Linear(self.dim*self.seq_length//num_heads, self.dim*self.seq_length//num_heads) for _ in range(self.num_heads)]
     
     def forward(self, x): #B, C, N
         x += self.pos_embed #B, C, N
         x = self.blocks(x) #B, C, N
         if self.with_outro:
-            x = x.reshape(-1, self.seq_lengh*self.dim)
-            x = self.outro(x) 
-            x = x.reshape(-1, self.seq_lengh, self.dim)
+            x = x.reshape(-1, self.seq_length, self.num_heads, self.head_dim)
+            x = x.permute(2, 0, 1, 3).reshape(self.num_heads, -1, self.seq_length*self.head_dim)
+            x = torch.stack([proj(inp) for proj, inp in zip(self.outro, x)], dim=0)
+            x = x.reshape(self.num_heads, -1, self.seq_length, self.head_dim).permute(1, 2, 0, 3)
+            x = x.reshape(-1, self.seq_length, self.dim)
 
         x = self.maxpool(x) #B, C, N//2
         return x
@@ -296,13 +311,16 @@ class UpTransformer(nn.Module):
         super().__init__()
 
         self.dim = input_dim*2
-        self.seq_lengh = seq_length
+        self.seq_length = seq_length
         self.with_outro = with_outro
+        self.num_heads = num_heads
+        self.num_heads = num_heads
+        self.head_dim = self.dim//num_heads
 
         # if bilinear, use the normal convolutions to reduce the number of channels
         if bilinear: self.up = nn.Upsample(scale_factor=2, mode='linear', align_corners=False)
         else: self.up = nn.ConvTranspose1d(in_channels // 2, in_channels // 2, kernel_size=2, stride=2)
-        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_lengh, self.dim) * .02)
+        self.pos_embed = nn.Parameter(torch.randn(1, self.seq_length, self.dim) * .02)
         self.blocks = nn.Sequential(*[
             TransformerBlock(
                 dim=self.dim, 
@@ -314,16 +332,19 @@ class UpTransformer(nn.Module):
                 norm_layer=norm_layer,
             ) for _ in range(depth)
         ])
-        if self.with_outro: self.outro = nn.Linear(self.dim*self.seq_lengh, self.dim*self.seq_lengh)
+        if self.with_outro: 
+            self.outro = [nn.Linear(self.dim*self.seq_length//num_heads, self.dim*self.seq_length//num_heads) for _ in range(self.num_heads)]
     
     def forward(self, x): #B, C, N
         x = self.up(x) #B, C, N*2
         x += self.pos_embed #B, C, N*2
         x = self.blocks(x) #B, C, N*2
         if self.with_outro:
-            x = x.reshape(-1, self.seq_lengh*self.dim)
-            x = self.outro(x) 
-            x = x.reshape(-1, self.seq_lengh, self.dim)
+            x = x.reshape(-1, self.seq_length, self.num_heads, self.head_dim)
+            x = x.permute(2, 0, 1, 3).reshape(self.num_heads, -1, self.seq_length*self.head_dim)
+            x = torch.stack([proj(inp) for proj, inp in zip(self.outro, x)], dim=0)
+            x = x.reshape(self.num_heads, -1, self.seq_length, self.head_dim).permute(1, 2, 0, 3)
+            x = x.reshape(-1, self.seq_length, self.dim)
         return x
 
 #########

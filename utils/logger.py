@@ -24,6 +24,7 @@ class Logger:
         config : dict = {},
         log_freq : int = 10,
         model_description : str = None,
+        watch_model : bool = True
     ):
         
         self.log_type = log_type
@@ -51,9 +52,10 @@ class Logger:
             print("Logging via WandB")
             
             self.run = wandb.init(name=self.run_name, project=project_name, config=config)  # Initialize wandb
-            self.artifact = wandb.Artifact(config['model']["model"], type='model', description=model_description, metadata=config)
             
-            wandb.watch(model, log_freq=log_freq)
+            if watch_model: 
+                self.artifact = wandb.Artifact(config['model']["model"], type='model', description=model_description, metadata=config)
+                wandb.watch(model, log_freq=log_freq)
             
         elif self.log_type == "none":
             print("No logging")
@@ -126,7 +128,9 @@ class Logger:
     def _log_model(self, model_file):
         self.artifact.add_file(model_file)
             
-    def save_model(self, epoch):
+    def save_model(self, epoch, model=None):
+        if model is None: model = self.model
+        
         if self.log_type == "none":
             pass
         
@@ -136,7 +140,7 @@ class Logger:
                 os.makedirs(save_dir)
             
             model_file = os.path.join(save_dir, str(epoch) + "_epoch.pth")
-            torch.save(self.model.state_dict(), model_file)
+            torch.save(model.state_dict(), model_file)
 
             if self.log_type == "wandb":
                 self._log_model(model_file)
