@@ -1,0 +1,8 @@
+{
+    "scheduler" : "ReduceLROnPlateau",
+    "kwargs": {
+        "factor": 0.5,
+        "patience": 3, 
+        "verbose": true
+    }
+}

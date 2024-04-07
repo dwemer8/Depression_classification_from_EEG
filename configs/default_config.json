@@ -1,0 +1,282 @@
+{
+    "project_name": "EEG_depression_classification",
+    "method": "direct restoration",
+    "save_path": "model_weights/",
+    "log_path": "logs/",
+    "hash": "0",
+    "display_mode": "terminal",
+    "dataset": {
+        "dataloader": {
+            "batch_size": 256,
+            "num_workers": 0
+        },
+        "samples_shape": null,
+        "train": {
+            "pretrain": null,
+            "train": {
+                "source": {
+                    "name": "inhouse_dataset",
+                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+                },
+                "size": null,
+                "n_samples": null,
+                "preprocessing": {
+                    "is_squeeze": false,
+                    "is_unsqueeze": false,
+                    "t_max": null
+                },
+                "steps": {
+                    "start_epoch": 10,
+                    "end_epoch": 85,
+                    "step_max": null
+                }
+            }
+        },
+        "val": {
+            "source": {
+                "name": "inhouse_dataset",
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+            },
+            "size": 30,
+            "n_samples": null,
+            "preprocessing": {
+                "is_squeeze": false,
+                "is_unsqueeze": false,
+                "t_max": null
+            }
+        },
+        "test": {
+            "source": {
+                "name": "inhouse_dataset",
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+            },
+            "size": 30,
+            "n_samples": null,
+            "preprocessing": {
+                "is_squeeze": false,
+                "is_unsqueeze": false,
+                "t_max": null
+            }
+        }
+    },
+    "model": {
+        "model": "VAE_parametrized",
+        "model_description": "beta-VAE",
+        "loss_reduction": "mean",
+        "framework": {
+            "latent_dim": 512,
+            "beta": 2,
+            "first_decoder_conv_depth": 32,
+            "loss_reduction": "mean"
+        },
+        "encoder": {
+            "down_blocks_config": [
+                {
+                    "in_channels": 3,
+                    "out_channels": 4,
+                    "kernel_size": 7,
+                    "n_convs": 2,
+                    "activation": "ReLU"
+                },
+                {
+                    "in_channels": 4,
+                    "out_channels": 8,
+                    "kernel_size": 7,
+                    "n_convs": 2,
+                    "activation": "ReLU"
+                },
+                {
+                    "in_channels": 8,
+                    "out_channels": 16,
+                    "kernel_size": 5,
+                    "n_convs": 2,
+                    "activation": "ReLU"
+                }
+            ],
+            "out_conv_config": {
+                "in_channels": 16,
+                "out_channels": 64,
+                "kernel_size": 3,
+                "n_convs": 2,
+                "activation": "ReLU",
+                "normalize_last": false
+            }
+        },
+        "decoder": {
+            "in_conv_config": {
+                "in_channels": 32,
+                "out_channels": 16,
+                "kernel_size": 3,
+                "n_convs": 2,
+                "activation": "ReLU"
+            },
+            "up_blocks_config": [
+                {
+                    "in_channels": 16,
+                    "out_channels": 8,
+                    "kernel_size": 3,
+                    "n_convs": 2,
+                    "activation": "ReLU"
+                },
+                {
+                    "in_channels": 8,
+                    "out_channels": 4,
+                    "kernel_size": 3,
+                    "n_convs": 2,
+                    "activation": "ReLU"
+                },
+                {
+                    "in_channels": 4,
+                    "out_channels": 3,
+                    "kernel_size": 1,
+                    "n_convs": 2,
+                    "activation": "ReLU",
+                    "normalize_last": false
+                }
+            ]
+        }
+    },
+    "optimizer": {
+        "optimizer": "AdamW",
+        "kwargs": {
+            "lr": 0.001
+        }
+    },
+    "scheduler": {
+        "scheduler": "ReduceLROnPlateau",
+        "kwargs": {
+            "factor": 0.5,
+            "patience": 3,
+            "verbose": true
+        }
+    },
+    "train": {
+        "loss_coefs": {
+            "ampl": 1,
+            "vel": 0,
+            "acc": 0,
+            "frq": 0,
+            "kl": 1
+        },
+        "masking": {
+            "n_masks": 0,
+            "mask_ratio": 0
+        },
+        "early_stopping": {
+            "patience": 20,
+            "eps": 0.0001
+        },
+        "validation": {
+            "check_period": 10000000000.0,
+            "plot_period": null,
+            "check_period_per_epoch": 5,
+            "plot_period_per_epoch": 5
+        }
+    },
+    "ml": {
+        "avg_embeddings_over_time": true,
+        "plot_type": "classification",
+        "ml_model": {
+            "scaler": "preprocessing.StandardScaler",
+            "clf": "svm.SVC"
+        },
+        "ml_param_grid": {
+            "clf__C": [
+                0.1,
+                1,
+                10
+            ],
+            "clf__class_weight": [
+                "balanced"
+            ],
+            "clf__random_state": [
+                42
+            ],
+            "clf__kernel": [
+                "linear"
+            ],
+            "clf__probability": [
+                true
+            ]
+        },
+        "ml_eval_function": [
+            "evaluateClassifier"
+        ],
+        "ml_eval_function_tag": [
+            "d"
+        ],
+        "ml_eval_function_kwargs": [
+            {
+                "verbose": 0,
+                "test_size": 0.33,
+                "SEED": 42,
+                "cv_scorer": "accuracy_score",
+                "metrics": [
+                    [
+                        "balanced_accuracy_score",
+                        "hard"
+                    ],
+                    [
+                        "recall_score",
+                        "hard"
+                    ],
+                    [
+                        "precision_score",
+                        "hard"
+                    ],
+                    [
+                        "average_precision_score",
+                        "soft"
+                    ],
+                    [
+                        "roc_auc_score",
+                        "soft"
+                    ],
+                    [
+                        "f1_score",
+                        "hard"
+                    ],
+                    [
+                        "accuracy_score",
+                        "hard"
+                    ]
+                ],
+                "metrics_for_CI": [
+                    [
+                        "balanced_accuracy_score",
+                        "hard"
+                    ],
+                    [
+                        "recall_score",
+                        "hard"
+                    ],
+                    [
+                        "precision_score",
+                        "hard"
+                    ],
+                    [
+                        "average_precision_score",
+                        "soft"
+                    ],
+                    [
+                        "roc_auc_score",
+                        "soft"
+                    ],
+                    [
+                        "f1_score",
+                        "hard"
+                    ],
+                    [
+                        "accuracy_score",
+                        "hard"
+                    ]
+                ],
+                "n_bootstraps": 1000
+            }
+        ],
+        "ml_metric_prefix": "clf"
+    },
+    "logger": {
+        "log_type": "wandb"
+    }
+}

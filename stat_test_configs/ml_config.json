@@ -1,0 +1,32 @@
+{
+    "avg_embeddings_over_time": false,
+    "plot_type": "classification", #"regression"/"classification"
+    "ml_model": {
+        "scaler" : "preprocessing.StandardScaler",
+        "clf": "svm.SVC"
+    },
+    "ml_param_grid" : {
+        "clf__kernel": ["linear"],
+        "clf__C": [0.1, 1, 10],
+        "clf__probability": [true],
+        "clf__class_weight": ["balanced"],
+        "clf__random_state": [{SEED}]
+    },
+    "ml_eval_function" : [
+        "get_bootstrap_classifier_values"
+    ],
+    "ml_eval_function_tag" : [
+        "d"
+    ],
+    "ml_eval_function_kwargs" : [
+        {
+            "verbose" : 10,
+            "test_size" : 0.33,
+            "SEED" : {SEED},
+            "cv_scorer" : "accuracy_score",
+            "metrics_for_CI": [["average_precision_score", "soft"]], #["roc_auc_score", "soft"], ["accuracy_score", "hard"], ["f1_score", "hard"]],
+            "n_bootstraps" : 1000 #!!CHECK
+        }
+    ],
+    "ml_metric_prefix" : "clf"
+}

@@ -1,0 +1,71 @@
+{
+    "dataloader":{
+        "batch_size": 256,
+        "num_workers": 0
+    },
+    "samples_shape": null, #will be updated in train function
+    "train": {
+        "pretrain": {
+            "source":{
+                "name": "TUAB", #inhouse_dataset/depression_anonymized/TUAB
+                "file": "{TUAB_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl"
+            },
+            "size": null,
+            "n_samples": null, #will be updated in train function,
+            "preprocessing":{
+                "is_squeeze": false,
+                "is_unsqueeze": false,
+                "t_max": null
+            },
+            "steps": {
+                "start_epoch": 0, # including !!CHECK
+                "end_epoch": 10, # excluding, !!CHECK
+                "step_max" : null #!!CHECK
+            }
+        },
+        "train": {
+            "source":{
+                "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
+                "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+            },
+            "size": null,
+            "n_samples": null, #will be updated in train function,
+            "preprocessing":{
+                "is_squeeze": false, 
+                "is_unsqueeze": false, 
+                "t_max": null
+            },
+            "steps": {
+                "start_epoch": 10, # including #!!CHECK
+                "end_epoch": 85, # excluding, #!!CHECK
+                "step_max" : null #!!CHECK
+            }
+        }
+    },
+    "val": {
+        "source":{
+            "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
+            "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
+        },
+        "size": 30, #n_patients
+        "n_samples": null, #will be updated in train function
+        "preprocessing":{
+            "is_squeeze": false,
+            "is_unsqueeze": false,
+            "t_max": null
+        }
+    },
+    "test": {
+        "source":{
+            "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
+            "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
+        },
+        "size": 30, #n_patients
+        "n_samples": null, #will be updated in train function
+        "preprocessing":{
+            "is_squeeze": false,
+            "is_unsqueeze": false,
+            "t_max": null
+        }
+    }
+}

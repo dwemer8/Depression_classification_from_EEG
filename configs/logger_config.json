@@ -1,0 +1,3 @@
+{
+    "log_type" : "wandb" #"wandb"/"tensorboard"/"none" #!!CHECK
+}

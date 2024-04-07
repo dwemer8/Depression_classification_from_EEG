@@ -1,0 +1,23 @@
+{
+    "loss_coefs": {
+        "ampl": 1,
+        "vel": 0,
+        "acc": 0,
+        "frq": 0,
+        "kl": 1
+    },
+    "masking" :{
+        "n_masks" : 0, #0/1
+        "mask_ratio" : 0 #[0, 1]
+    },
+    "early_stopping": {
+        "patience": 20,
+        "eps": 1e-4
+    },
+    "validation": {
+        "check_period": 1e10,
+        "plot_period": null, #1e10
+        "check_period_per_epoch": 5,
+        "plot_period_per_epoch": 5
+    }
+}

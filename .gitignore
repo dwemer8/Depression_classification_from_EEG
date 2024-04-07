@@ -8,3 +8,6 @@ artifacts/
 model_weights/
 wandb/
 logs/
+figs/
+*current_results.json
+experiments.ipynb
