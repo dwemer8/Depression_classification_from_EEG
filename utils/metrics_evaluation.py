@@ -9,23 +9,27 @@ from confusion_matrix.cf_matrix import make_confusion_matrix
 from .plotting import printScores, plotROC, plotPR
 from .common import get_object_name
 
-def compute_bootstrapped_score(y_test, y_prob, scorer, m_sample=None, stratum_idx_vals=None):
+def compute_bootstrapped_score(y_test, y_prob, scorer, m_sample=None, stratum_vals=None):
     idx = np.array(range(len(y_test)))
     if m_sample is None: m_sample = len(y_test) #bootstrap sample size
         
-    if stratum_idx_vals is not None: #select equal number of samples from each category
+    if stratum_vals is not None: #select equal number of samples from each category
         idx_bs = [] 
-        for val in set(stratum_idx_vals):
-            stratum_idx = idx[stratum_idx_vals == val]
+        for val in set(stratum_vals):
+            stratum_idx = idx[stratum_vals == val] 
             idx_bs += np.random.choice(stratum_idx, size=len(stratum_idx), replace=True).tolist()
     else:
         idx_bs = np.random.choice(idx, size=m_sample, replace=True)
-    return scorer(y_test[idx_bs], y_prob[idx_bs])
+
+    try:
+        return scorer(y_test[idx_bs], y_prob[idx_bs])
+    except:
+        return np.nan
 
 def get_bootstrap_estimates(
     y_test, 
     y_prob, 
-    stratum_idx_vals=None, 
+    stratum_vals=None, 
     n_bootstraps=1000, 
     m_sample=None, 
     scorer=accuracy_score, 
@@ -37,16 +41,28 @@ def get_bootstrap_estimates(
     if verbose > 0:
         print("Bootstrap scores computing...")
         for _ in tqdm(range(n_bootstraps)):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+            scores.append(compute_bootstrapped_score(
+                y_test, 
+                y_prob, 
+                scorer, 
+                stratum_vals=stratum_vals, 
+                m_sample=m_sample
+            ))
     else:
         for _ in range(n_bootstraps):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+            scores.append(compute_bootstrapped_score(
+                y_test, 
+                y_prob, 
+                scorer, 
+                stratum_vals=stratum_vals, 
+                m_sample=m_sample
+            ))
     return np.array(scores)
 
 def get_bootstrap_estimates_for_metrics(
     y_test, 
     y_prob, 
-    msmnt_idx=None, 
+    stratum_vals=None, 
     threshold=0.5, 
     verbose=1, 
     n_bootstraps=1000,
@@ -63,7 +79,7 @@ def get_bootstrap_estimates_for_metrics(
         estimates[method_name] = get_bootstrap_estimates(
             y_test, 
             y_pred_, 
-            stratum_idx_vals=msmnt_idx,
+            stratum_vals=stratum_vals,
             n_bootstraps=n_bootstraps, 
             scorer=method, 
             verbose=(verbose-1),
@@ -74,7 +90,7 @@ def get_bootstrap_estimates_for_metrics(
 def evalConfInt(
     y_test, 
     y_prob, 
-    stratum_idx_vals=None, 
+    stratum_vals=None, 
     n_bootstraps=1000, 
     m_sample=None, 
     scorer=average_precision_score, 
@@ -87,15 +103,17 @@ def evalConfInt(
     if verbose > 0:
         print("Bootstrap scores computing...")
         for _ in tqdm(range(n_bootstraps)):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_vals=stratum_vals, m_sample=m_sample))
     else:
         for _ in range(n_bootstraps):
-            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_idx_vals=stratum_idx_vals, m_sample=m_sample))
+            scores.append(compute_bootstrapped_score(y_test, y_prob, scorer, stratum_vals=stratum_vals, m_sample=m_sample))
+            
     scores = np.array(scores)
+    if verbose > 0: print(f"N samples = {len(scores)}")
     
     perc = sts.norm.ppf(1 - alpha/2)
-    estimation = scores.mean()
-    se = scores.std() * perc
+    estimation = np.nanmean(scores)
+    se = np.nanstd(scores) * perc
     
     if verbose > 0:
         plt.figure(figsize=(4, 2.5))
@@ -131,7 +149,7 @@ def compute_sensitivity_specificity(y_test, y_prob, threshold):
 def evaluateMetrics(
     y_test, 
     y_prob, 
-    msmnt_idx=None, 
+    stratum_vals=None, 
     threshold=0.5, 
     verbose=1, 
     n_bootstraps=1000,
@@ -157,10 +175,10 @@ def evaluateMetrics(
         if method_type == "soft": y_pred_ = y_prob
         elif method_type == "hard": y_pred_ = y_pred
         est, se = evalConfInt(
-            y_test, y_pred_, msmnt_idx, n_bootstraps=n_bootstraps, alpha=alpha, verbose=(verbose-1), scorer=method
+            y_test, y_pred_, stratum_vals, n_bootstraps=n_bootstraps, alpha=alpha, verbose=(verbose-1), scorer=method
         )
-        estimates[method_name + ".bs"] = est
-        estimates[method_name + ".se.bs"] = se
+        estimates["bs." + method_name] = est
+        estimates["bs." + method_name + ".se"] = se
         if verbose > 0: print(f"{method_name}, 0.95% interval from bootstrap: {est:0.3f}+-{se:0.3f}")
             
     ### Additional metrics ###
@@ -170,8 +188,8 @@ def evaluateMetrics(
         printScores(y_test, y_prob > threshold)
     
         #Print scores for each type of measurement
-        if msmnt_idx is not None:
-            accuracies = compute_accuracy_for_each_measurement(y_test, y_prob, msmnt_idx, threshold=0.5, verbose=(verbose-1))
+        if stratum_vals is not None:
+            accuracies = compute_accuracy_for_each_measurement(y_test, y_prob, stratum_vals, threshold=0.5, verbose=(verbose-1))
             display(accuracies)
             
     #specificity, sensitivity
@@ -240,7 +258,7 @@ def evaluateMetrics_cv(
             
         est, se = evalConfInt_cv(clf, X, y, cv, scorer, alpha=alpha, verbose=(verbose-1))
         
-        estimates[method_name + ".cv"] = est
-        estimates[method_name + ".se.cv"] = se
+        estimates["cv." + method_name] = est
+        estimates["cv." + method_name + ".se"] = se
         if verbose > 0: print(f"{method_name}, {1 - alpha:.02f}% interval from cross-validation: {est:0.3f}+-{se:0.3f}")
     return estimates

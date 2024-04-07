@@ -19,7 +19,7 @@ class VAE(torch.nn.Module):
         self.decoder = decoder
         self.Z_DIM = args["latent_dim"]
         self.beta = args["beta"]
-        self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss redicing
+        self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss reducing
         self.loss_reduction = args["loss_reduction"] #sum or mean
         
     def _encode(self, imgs):

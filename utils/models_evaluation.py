@@ -25,6 +25,7 @@ def evaluateClassifier(
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
+    evaluate_on_train=True
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):
         y_pred = clf.predict(X)
@@ -36,13 +37,14 @@ def evaluateClassifier(
             metrics=metrics,
             metrics_for_CI=metrics_for_CI,
             n_bootstraps=n_bootstraps,
+            stratum_vals=y
         )
         return estimates
     
     model = deepcopy(model)
 
     if verbose > 0: print("Data split") 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=SEED, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=SEED, shuffle=True, stratify=y)
 
     if verbose > 0: print("GridSearchCV")
     clf = GridSearchCV(
@@ -56,14 +58,15 @@ def evaluateClassifier(
 
     clf.fit(X_train, y_train)
     if verbose > 0: print("Best classifier:", clf.best_estimator_)
-
-    if verbose > 0: print("Evaluation on the train data")
-    estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
-
     if verbose - 1 > 0:
         print("Best classifier:")
         print("Parameters:", clf.best_params_)
         print("Score:", clf.best_score_)
+
+    estimates_train={}
+    if evaluate_on_train:
+        if verbose > 0: print("Evaluation on the train data")
+        estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
     
     if verbose > 0: print("Evaluation on the test data")
     estimates_test = evaluate(clf.best_estimator_, X_test, y_test)

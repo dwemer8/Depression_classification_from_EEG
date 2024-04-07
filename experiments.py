@@ -1,24 +1,9 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Libraries installation
-
-# In[1]:
-
-
-# !pip uninstall torch torchvision torchaudio -y
-# !pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
-# !pip install mne -q
-# !pip install wandb -q
-# !pip install tensorboard -q
-
-
-# # Constants and libraries
-
-# In[2]:
-
-
 '''
+# Environment variables
+
 In this section one defines environment variables. 
 Because I used this notebook on number of machines, I implemented class especially for this. 
 You may not needed in one and use just simple definitions.
@@ -59,9 +44,9 @@ print()
 print(f"{INHOUSE_DIRECTORY = }")
 print()
 
-
-# In[3]:
-
+'''
+Common libraries
+'''
 
 import warnings
 warnings.simplefilter("ignore")
@@ -107,8 +92,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
 
-# In[4]:
-
+'''
+Project libraries
+'''
 
 sys.path.append(SRC_FOLDER)
 
@@ -117,7 +103,7 @@ sys.path.append(SRC_FOLDER)
 # get_ipython().run_line_magic('aimport', 'utils')
 
 from utils import SEED
-from utils.common import objectName, seed_all, printLog, upd, Config, read_json_with_comments
+from utils.common import objectName, seed_all, printLog, upd, Config, read_json_with_comments, wrap_field
 from utils.models_evaluation import evaluateClassifier, evaluateRegressor, evaluateClassifier_inner_outer_cv
 from utils.data_reading import DataReader
 from utils.plotting import dataset_hists, plotData, dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
@@ -130,13 +116,11 @@ from models import get_model, load_weights_from_wandb
 
 from training import train_eval
 
+'''
+Experiment function
+'''
 
-# # Train function
-
-# In[5]:
-
-
-def train(config, verbose=0):
+def do_experiment(config, verbose=0):
     try:
         if config["log_path"] is not None: logfile = open(os.path.join(config["log_path"], config["model"]["model_description"].replace(" ", "_").replace("/", ".")), "a")
         else: logfile = None
@@ -147,7 +131,8 @@ def train(config, verbose=0):
         if verbose - 1 > 0: printLog("Data reading", logfile=logfile)
 
         #datasets
-        #only two setups still supported!
+        #only two setups still supported: pretrain!=train=val=test and pretrain!=train!=val=test
+        #TODO: add more setups
         pretrain_config = config["dataset"]["train"]["pretrain"]
         train_config = config["dataset"]["train"]["train"]
         val_config = config["dataset"]["val"]
@@ -162,7 +147,7 @@ def train(config, verbose=0):
                 train_size=pretrain_config["size"], val_size=0, test_size=0
             )
         
-        if (pretrain_config["source"] if pretrain_config is not None else {}) != train_config["source"] == val_config["source"] == test_config["source"]:
+        if wrap_field(pretrain_config, 'source') != train_config["source"] == val_config["source"] == test_config["source"]:
             reader = DataReader(
                 train_config["source"]["file"], 
                 dataset_type=train_config["source"]["name"],
@@ -172,7 +157,7 @@ def train(config, verbose=0):
                 train_size=train_config["size"], val_size=val_config["size"], test_size=test_config["size"]
             )    
             
-        elif (pretrain_config["source"] if pretrain_config is not None else {}) != train_config["source"] != val_config["source"] == test_config["source"] != pretrain_config["source"]:
+        elif wrap_field(pretrain_config, 'source') != train_config["source"] != val_config["source"] == test_config["source"] != wrap_field(pretrain_config, 'source'):
             train_reader = DataReader(
                 train_config["source"]["file"],
                 dataset_type=train_config["source"]["name"],
@@ -290,7 +275,7 @@ def train(config, verbose=0):
         printLog(json.dumps(config, indent=4), logfile=logfile)
         
         #parse ml config
-        #should be just before training because replace names by objects
+        #NB:should be just before training because replace names by objects
         config["ml"] = parse_ml_config(config["ml"])
     
         #seed
@@ -376,8 +361,9 @@ def train(config, verbose=0):
         
                 zero_ml_tag = config["ml"]["ml_eval_function_tag"][0]
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
-                if results.get(f'clf.{zero_ml_tag}.test.accuracy.{last_tag}', -1) > best_clf_accuracy:
-                    best_clf_accuracy = results[f'clf.{zero_ml_tag}.test.accuracy.{last_tag}']
+                accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.accuracy'
+                if results.get(accuracy_tag, -np.inf) > best_clf_accuracy:
+                    best_clf_accuracy = results[accuracy_tag]
                     best_model = model
                     best_epoch = epoch
                     if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
@@ -440,11 +426,9 @@ def train(config, verbose=0):
             logfile.close()
         return {}
 
-
-# # Config
-
-# In[6]:
-
+'''
+# Config
+'''
 
 train_config = read_json_with_comments("configs/train_config.json")
 logger_config = read_json_with_comments("configs/logger_config.json")
@@ -485,110 +469,128 @@ default_config = {
 
 with open("configs/default_config.json", "w") as f: json.dump(default_config, f, indent=4, ensure_ascii=False)
 
-
-# # Experiments
-
-# In[7]:
-
+'''
+# Define experiments
+'''
 
 import itertools
 
 experiments = []
-for is_pretrain in [False, True]:
-    for t in [1, 15, 60]:
-        hash = hex(random.getrandbits(32))
-        default_config.update({"hash": hash})
-        dc = Config(default_config)
-        for p_dropout in [0.1, 0.3, 0.5, 0.7]:
-            if is_pretrain:
-                train_config = {
-                    "pretrain": {
-                        "source":{
-                            "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
-                        },
-                        "steps": {
-                            "start_epoch": 0, # including
-                            "end_epoch": 10, # excluding,
-                        }
+for is_pretrain in [
+    True,
+    False
+]:
+    hash = hex(random.getrandbits(32))
+    default_config.update({"hash": hash})
+    dc = Config(default_config)
+    for t in [
+        1, 
+        5, 
+        10, 
+        15, 
+        30, 
+        60
+    ]:
+        if is_pretrain:
+            train_config = {
+                "pretrain": {
+                    "source":{
+                        "name": "TUAB",
+                        "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
                     },
-                    "train": {
-                        "source":{
-                            "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                        },
-                        "steps": {
-                            "start_epoch": 10,
-                            "end_epoch": 85,
-                        }
-                    }
-                }
-            else:
-                train_config = {
-                    "pretrain": None,
-                    "train": {
-                        "source":{
-                            "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                        },
-                        "steps": {
-                            "start_epoch": 0,
-                            "end_epoch": 75,
-                        }
+                    "size": None,
+                    "n_samples": None, #will be updated in train function,
+                    "preprocessing":{
+                        "is_squeeze": False, 
+                        "is_unsqueeze": False, 
+                        "t_max": None
                     },
-                }
-            
-            cc = dc.upd({
-                "model":{
-                    "model_description": f"p_dropout {p_dropout}, nta, {'finetune, ' if is_pretrain else ''}{t} s, " + dc.config["model"]["model_description"], #!!CHECK
-                    "encoder": {
-                        "down_blocks_config": [
-                            {"input_dim": 128*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
-                            {"input_dim": 64*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
-                            {"input_dim": 32*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm"}
-                        ],
-                        "out_block_config": {"dim": 16*t, "num_heads": t, "mlp_ratio": 1, "mlp_depth": 2, "p_dropout": p_dropout, "activation": "PReLU", "norm_layer": "LayerNorm"}
-                    },
-                    "decoder":{
-                        "in_block_config": {"dim": 16*t, "num_heads": t, "mlp_ratio": 1, "mlp_depth": 2, "p_dropout": p_dropout, "activation": "PReLU", "norm_layer": "LayerNorm"},
-                        "up_blocks_config": [
-                            {"input_dim": 16*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
-                            {"input_dim": 32*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm"},
-                            {"input_dim": 64*t, "seq_length": 3, "num_heads": t, "depth": 1, "mlp_depth": 2, "mlp_ratio": 1, "p_dropout": p_dropout, "act_layer": "PReLU", "norm_layer": "LayerNorm", "with_outro": True}
-                        ]
+                    "steps": {
+                        "start_epoch": 0, # including
+                        "end_epoch": 10, # excluding,
+                        "step_max" : None #!!CHECK
                     }
                 },
-                "dataset": {
-                    "train": train_config,
-                    "val": {
-                        "source":{
-                            "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                        },
+                "train": {
+                    "source":{
+                        "name": "inhouse_dataset",
+                        "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
-                    "test": {
-                        "source":{
-                            "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                        },
-                    },
+                    "steps": {
+                        "start_epoch": 10,
+                        "end_epoch": 85,
+                    }
                 }
-            })
-            experiments.append(cc)
-
-
-# In[8]:
-
+            }
+        else:
+            train_config = {
+                "pretrain": None,
+                "train": {
+                    "source":{
+                        "name": "inhouse_dataset",
+                        "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                    "steps": {
+                        "start_epoch": 0,
+                        "end_epoch": 75,
+                    }
+                },
+            }
+        
+        cc = dc.upd({
+            "model":{
+                #!!CHECK
+                "model_description": f"{'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
+                "framework": {
+                    "latent_dim": t*16*32,
+                    "beta": 2,
+                    "first_decoder_conv_depth": 32,
+                    "loss_reduction" : "mean" #"mean"/"sum
+                },
+                "encoder": {
+                    "down_blocks_config": [
+                        {"in_channels": 3, "out_channels": 4, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                        {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
+                        {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
+                    ],
+                    "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False}
+                },
+                "decoder":{
+                    "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                    "up_blocks_config": [
+                        {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                        {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
+                        {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False}
+                    ]
+                }
+            },
+            "dataset": {
+                "train": train_config,
+                "val": {
+                    "source":{
+                        "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                },
+                "test": {
+                    "source":{
+                        "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                },
+            }
+        })
+        experiments.append(cc)
 
 print("N experiments:", len(experiments))
 for exp in experiments:
     print(exp['hash'], exp['model']['model_description'])
 
-
-# # Training
-
-# In[9]:
-
-
+'''
+# Conducting experiments
+'''
 all_results = []
 for config in experiments:
     exp_results = {
-        config['model']["model_description"] : train(config, verbose=3)
+        config['model']["model_description"] : do_experiment(config, verbose=3)
     }
     all_results.append(exp_results)
     with open(os.path.join(config["log_path"], "all_results_" + config["model"]["model_description"].replace(" ", "_").replace("/", ".")), "w") as f:

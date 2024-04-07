@@ -80,3 +80,9 @@ def read_json_with_comments(path, replacements=None):
     if replacements is not None: lines = list(map(lambda line: replace(line, replacements), lines))
     lines = "\n".join(lines)
     return json.loads(lines)
+
+def wrap_field(d, field):
+    try:
+        return d[field]
+    except:
+        return {}
