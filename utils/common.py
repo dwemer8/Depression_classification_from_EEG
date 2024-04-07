@@ -81,6 +81,15 @@ def read_json_with_comments(path, replacements=None):
     lines = "\n".join(lines)
     return json.loads(lines)
 
+def replace_placeholder(d, placeholder, value):
+    d = deepcopy(d)
+    for k, v in d.items():
+        if v == placeholder:
+            d[k] = value
+        elif isinstance(v, dict):
+            d[k] = replace_placeholder(v, placeholder, value)
+    return d
+
 def wrap_field(d, field):
     try:
         return d[field]

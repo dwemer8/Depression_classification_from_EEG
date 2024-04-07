@@ -9,7 +9,7 @@ from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, av
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 
-from utils import SEED
+from utils import DEFAULT_SEED
 
 # import pandas as pd
 
@@ -142,14 +142,14 @@ def dataset_hists(train_set, val_set, test_set, chunk_bins=20, target_bins=3, ch
 
 # embeddings visualization
 
-def plotData(X, y, method="pca", ax=plt, plot_type="regression", **kwargs):
+def plotData(X, y, method="pca", ax=plt, plot_type="regression", seed=DEFAULT_SEED, **kwargs):
     n_components = 2
     if method == "pca":
-        reducer = PCA(n_components=n_components, random_state=SEED, whiten=True, svd_solver="full", **kwargs)
+        reducer = PCA(n_components=n_components, random_state=seed, whiten=True, svd_solver="full", **kwargs)
     elif method == "tsne":
-        reducer = TSNE(n_components=n_components, random_state=SEED, **kwargs)
+        reducer = TSNE(n_components=n_components, random_state=seed, **kwargs)
     elif method == "svd":
-        reducer = TruncatedSVD(n_components=n_components, random_state=SEED, **kwargs)
+        reducer = TruncatedSVD(n_components=n_components, random_state=seed, **kwargs)
     else:
         raise "NotImplementedError"
 

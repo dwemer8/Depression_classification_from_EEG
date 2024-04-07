@@ -5,7 +5,7 @@ from copy import deepcopy
 
 from .metrics_evaluation import evaluateMetrics, evaluateMetrics_cv, get_bootstrap_estimates_for_metrics
 from .common import get_object_name
-from utils import SEED
+from utils import DEFAULT_SEED
 
 
 
@@ -20,7 +20,7 @@ def evaluateClassifier(
     param_grid, 
     verbose=1,
     test_size=0.33,
-    SEED=SEED,
+    seed=DEFAULT_SEED,
     cv_scorer=accuracy_score,
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
@@ -44,14 +44,14 @@ def evaluateClassifier(
     model = deepcopy(model)
 
     if verbose > 0: print("Data split") 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=SEED, shuffle=True, stratify=y)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True, stratify=y)
 
     if verbose > 0: print("GridSearchCV")
     clf = GridSearchCV(
         model,
         param_grid=param_grid,
         scoring=make_scorer(cv_scorer),
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED),
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
         n_jobs=-1,
         verbose=max(verbose-1, 0)
     ) 
@@ -82,7 +82,7 @@ def evaluateClassifier_inner_outer_cv(
     model, 
     param_grid, 
     verbose=1,
-    SEED=SEED,
+    seed=DEFAULT_SEED,
     cv_scorer=accuracy_score,
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_splits_inner=10,
@@ -90,8 +90,8 @@ def evaluateClassifier_inner_outer_cv(
 ):
     model = deepcopy(model)
     
-    inner_cv = StratifiedKFold(n_splits=n_splits_inner, shuffle=True, random_state=SEED)
-    outer_cv = StratifiedKFold(n_splits=n_splits_outer, shuffle=True, random_state=SEED+1)
+    inner_cv = StratifiedKFold(n_splits=n_splits_inner, shuffle=True, random_state=seed)
+    outer_cv = StratifiedKFold(n_splits=n_splits_outer, shuffle=True, random_state=seed+1)
 
     if verbose > 0: print("GridSearchCV")
     clf = GridSearchCV(
@@ -122,7 +122,7 @@ def evaluateRegressor(
     param_grid, 
     verbose=1,
     test_size=0.33,
-    SEED=SEED
+    seed=DEFAULT_SEED
 ):
     def evaluate(reg, X, y):
         y_pred = reg.predict(X)
@@ -131,14 +131,14 @@ def evaluateRegressor(
     model = deepcopy(model)
 
     if verbose > 0: print("Data split") 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=SEED, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True)
 
     if verbose > 0: print("GridSearchCV")
     reg = GridSearchCV(
         model,
         param_grid=param_grid,
         scoring=make_scorer(mse, greater_is_better=False),
-        cv=KFold(n_splits=5, shuffle=True, random_state=SEED),
+        cv=KFold(n_splits=5, shuffle=True, random_state=seed),
         n_jobs=-1,
         verbose=(verbose-1)
     ) 
@@ -169,7 +169,7 @@ def get_bootstrap_classifier_values(
     param_grid, 
     verbose=1,
     test_size=0.33,
-    SEED=SEED,
+    seed=DEFAULT_SEED,
     cv_scorer=accuracy_score,
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
@@ -187,14 +187,14 @@ def get_bootstrap_classifier_values(
     model = deepcopy(model)
 
     if verbose > 0: print("Data split") 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=SEED, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True)
 
     if verbose > 0: print("GridSearchCV")
     clf = GridSearchCV(
         model,
         param_grid=param_grid,
         scoring=make_scorer(cv_scorer),
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED),
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
         n_jobs=-1,
         verbose=max(verbose-1, 0)
     ) 

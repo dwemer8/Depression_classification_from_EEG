@@ -4,6 +4,9 @@
     "save_path": "model_weights/",
     "log_path": "logs/",
     "hash": "0",
+    "run_hash": "0",
+    "seed": 0,
+    "n_seeds": 1,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -26,8 +29,8 @@
                     "t_max": null
                 },
                 "steps": {
-                    "start_epoch": 10,
-                    "end_epoch": 85,
+                    "start_epoch": 0,
+                    "end_epoch": 1,
                     "step_max": null
                 }
             }
@@ -190,7 +193,7 @@
                 "balanced"
             ],
             "clf__random_state": [
-                42
+                "{SEED}"
             ],
             "clf__kernel": [
                 "linear"
@@ -209,7 +212,7 @@
             {
                 "verbose": 0,
                 "test_size": 0.33,
-                "SEED": 42,
+                "seed": "{SEED}",
                 "cv_scorer": "accuracy_score",
                 "metrics": [
                     [
@@ -271,12 +274,12 @@
                         "hard"
                     ]
                 ],
-                "n_bootstraps": 1000
+                "n_bootstraps": 10
             }
         ],
         "ml_metric_prefix": "clf"
     },
     "logger": {
-        "log_type": "wandb"
+        "log_type": "none"
     }
 }

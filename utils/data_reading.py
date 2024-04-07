@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
 
-from utils import SEED
+from utils import DEFAULT_SEED
 
 ##########################################################################
 #files
@@ -74,7 +74,7 @@ class DataReader:
             elif self.dataset_type == "TUAB":
                 print("\nChunks shape:", self.chunks_list["chunks_train"][0].shape, ", length:", len(self.chunks_list["chunks_train"]), ", keys:", self.chunks_list.keys())
 
-    def split(self, train_size=None, val_size=0.1, test_size=0.1):
+    def split(self, train_size=None, val_size=0.1, test_size=0.1, seed=DEFAULT_SEED):
         if self.dataset_type in ["depression_anonymized", "inhouse_dataset"]:
             '''
             We need to divide data in such way that records from the same patient should be only in train or test or validation
@@ -95,11 +95,11 @@ class DataReader:
                 
             elif train_size == 0 and val_size != 0 and test_size != 0:
                 patients_train = empty_patients_df()
-                patients_val, patients_test = train_test_split(patients_targets, test_size=(test_size/(test_size+val_size)), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
+                patients_val, patients_test = train_test_split(patients_targets, test_size=(test_size/(test_size+val_size)), random_state=seed, stratify=patients_targets["target"], shuffle=True)
                 
             elif (train_size is None or train_size != 0) and val_size != 0 and test_size != 0:
-                patients_train, patients_val_test = train_test_split(patients_targets, test_size=(val_size + test_size), random_state=SEED, stratify=patients_targets["target"], shuffle=True)
-                patients_val, patients_test = train_test_split(patients_val_test, test_size=(test_size/(test_size+val_size)), random_state=SEED, stratify=patients_val_test["target"], shuffle=True)
+                patients_train, patients_val_test = train_test_split(patients_targets, test_size=(val_size + test_size), random_state=seed, stratify=patients_targets["target"], shuffle=True)
+                patients_val, patients_test = train_test_split(patients_val_test, test_size=(test_size/(test_size+val_size)), random_state=seed, stratify=patients_val_test["target"], shuffle=True)
                 if train_size is not None: patients_train = patients_train[:train_size]
             
             else:

@@ -1,0 +1,6 @@
+- configs/ - configs. {something} is placeholder, which is replaced in experiments.py. 
+- utils - various utils
+- models - models zoo
+- experiments.py - entry point. Each experiment is run for n_seeds from config. Seed are taken from utils library. All runs with the same config, but different seeds, can be grouped using run_hash.
+- do_experiment.py - load datasets, parse config and so on
+- training.py - contains train_eval function for all models
