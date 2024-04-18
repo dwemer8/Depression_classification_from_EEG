@@ -21,7 +21,7 @@ def fileName(fname):
 
 def readDataExt_one(folder, ext="csv", exclude={}, add_filename=True, n_first=None, verbose=0, is_list=False, file_preprocess=None, file_postprocess=None):
     '''
-    Function reads tabular data from one folder
+    Function reads tabular data from one folder into one table or list of tables
     '''
     data = []
     file_names = os.listdir(folder)
@@ -41,7 +41,7 @@ def readDataExt_one(folder, ext="csv", exclude={}, add_filename=True, n_first=No
 
 def readDataExt_mul(folders, verbose=0, **kwargs):
     '''
-    Function reads tabular data from multiple folders
+    Function reads tabular data from multiple folders into list of tables or list of lists of tables
     '''
     dfs = []
     for folder in folders:

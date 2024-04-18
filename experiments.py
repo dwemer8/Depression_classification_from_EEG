@@ -55,6 +55,9 @@ import os
 import sys
 import json
 import random
+from copy import deepcopy
+
+import numpy as np
 
 import wandb
 wandb.login(key='1b8e8dc9dcf1a34397a04197c4826d3fe7441dae')
@@ -109,8 +112,9 @@ default_config = {
     "log_path" : OUTPUT_FOLDER + "logs/",
     "hash": "0",
     "run_hash": "0",
+    "run_name": "test",
     "seed": 0,
-    "n_seeds": 1, #no more than length of FIXED_SEEDS
+    "n_seeds": 3, #no more than length of FIXED_SEEDS
     "display_mode": "terminal", #ipynb/terminal
     
     "dataset": dataset_config,
@@ -130,134 +134,139 @@ with open("configs/default_config.json", "w") as f: json.dump(default_config, f,
 
 import itertools
 
-experiments = [default_config]
-# experiments = []
-# for is_pretrain in [
-#     True,
-#     False
-# ]:
-#     hash = hex(random.getrandbits(32))
-#     default_config.update({"hash": hash})
-#     dc = Config(default_config)
-#     for t in [
-#         1, 
-#         5, 
-#         10, 
-#         15, 
-#         30, 
-#         60
-#     ]:
-#         if is_pretrain:
-#             train_config = {
-#                 "pretrain": {
-#                     "source":{
-#                         "name": "TUAB",
-#                         "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
-#                     },
-#                     "size": None,
-#                     "n_samples": None, #will be updated in train function,
-#                     "preprocessing":{
-#                         "is_squeeze": False, 
-#                         "is_unsqueeze": False, 
-#                         "t_max": None
-#                     },
-#                     "steps": {
-#                         "start_epoch": 0, # including
-#                         "end_epoch": 10, # excluding,
-#                         "step_max" : None #!!CHECK
-#                     }
-#                 },
-#                 "train": {
-#                     "source":{
-#                         "name": "inhouse_dataset",
-#                         "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-#                     },
-#                     "steps": {
-#                         "start_epoch": 10,
-#                         "end_epoch": 85,
-#                     }
-#                 }
-#             }
-#         else:
-#             train_config = {
-#                 "pretrain": None,
-#                 "train": {
-#                     "source":{
-#                         "name": "inhouse_dataset",
-#                         "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-#                     },
-#                     "steps": {
-#                         "start_epoch": 0,
-#                         "end_epoch": 75,
-#                     }
-#                 },
-#             }
+# experiments = [default_config]
+experiments = []
+for is_pretrain in [
+    False,
+    True
+]:
+    hash = hex(random.getrandbits(32))
+    default_config.update({"hash": hash})
+    dc = Config(default_config)
+    for t in [
+        1, 
+        5, 
+        10, 
+        15, 
+        30, 
+        60
+    ]:
+        if is_pretrain:
+            train_config = {
+                "pretrain": {
+                    "source":{
+                        "name": "TUAB",
+                        "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
+                    },
+                    "size": None,
+                    "n_samples": None, #will be updated in train function,
+                    "preprocessing":{
+                        "is_squeeze": False, 
+                        "is_unsqueeze": False, 
+                        "t_max": None
+                    },
+                    "steps": {
+                        "start_epoch": 0, # including
+                        "end_epoch": 5, # excluding,
+                        "step_max" : None #!!CHECK
+                    }
+                },
+                "train": {
+                    "source":{
+                        "name": "depression_anonymized",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                    "steps": {
+                        "start_epoch": 5,
+                        "end_epoch": 80,
+                    }
+                }
+            }
+        else:
+            train_config = {
+                "pretrain": None,
+                "train": {
+                    "source":{
+                        "name": "depression_anonymized",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                    "steps": {
+                        "start_epoch": 0,
+                        "end_epoch": 75,
+                    }
+                },
+            }
         
-#         cc = dc.upd({
-#             "model":{
-#                 #!!CHECK
-#                 "model_description": f"{'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
-#                 "framework": {
-#                     "latent_dim": t*16*32,
-#                     "beta": 2,
-#                     "first_decoder_conv_depth": 32,
-#                     "loss_reduction" : "mean" #"mean"/"sum
-#                 },
-#                 "encoder": {
-#                     "down_blocks_config": [
-#                         {"in_channels": 3, "out_channels": 4, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
-#                         {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "Sigmoid"},
-#                         {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "Sigmoid"},
-#                     ],
-#                     "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False}
-#                 },
-#                 "decoder":{
-#                     "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
-#                     "up_blocks_config": [
-#                         {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
-#                         {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "Sigmoid"},
-#                         {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "Sigmoid", "normalize_last": False}
-#                     ]
-#                 }
-#             },
-#             "dataset": {
-#                 "train": train_config,
-#                 "val": {
-#                     "source":{
-#                         "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-#                     },
-#                 },
-#                 "test": {
-#                     "source":{
-#                         "file": INHOUSE_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-#                     },
-#                 },
-#             }
-#         })
-#         experiments.append(cc)
+        cc = dc.upd({
+            "run_name": f"64/64/64/3+SiLU, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
+            "model":{
+                #!!CHECK
+                "model_description": f"64/64/64/3+SiLU, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
+                "framework": {
+                    "latent_dim": t*16*3,
+                    "beta": 2,
+                    "first_decoder_conv_depth": 3,
+                    "loss_reduction" : "mean" #"mean"/"sum
+                },
+                "encoder": {
+                    "down_blocks_config": [
+                        {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                    ],
+                    "out_conv_config": {"in_channels": 64, "out_channels": 6, "kernel_size": 3, "n_convs": 1, "activation": "SiLU", "normalize_last": False}
+                },
+                "decoder":{
+                    "in_conv_config": {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                    "up_blocks_config": [
+                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 3, "activation": "SiLU"},
+                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 3, "activation": "SiLU"},
+                        {"in_channels": 64, "out_channels": 3, "kernel_size": 3, "n_convs": 3, "activation": "SiLU", "normalize_last": False}
+                    ]
+                }
+            },
+            "dataset": {
+                "train": train_config,
+                "val": {
+                    "source":{
+                        "name": "depression_anonymized",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                },
+                "test": {
+                    "source":{
+                        "name": "depression_anonymized",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                    },
+                },
+            }
+        })
+        experiments.append(cc)
 
 print("N experiments:", len(experiments))
 for exp in experiments:
-    print(exp['hash'], exp['model']['model_description'])
+    print(exp['hash'], exp['run_name'])
 
 '''
 # Conducting experiments
 '''
 all_results = []
+rng = np.random.default_rng()
 for config in experiments:
-    run_hash = hex(random.getrandbits(64)) #same for different seeds
+    run_hash = rng.bytes(8).hex() #same for different seeds
     config.update({"run_hash": run_hash})
     
     for seed in FIXED_SEEDS[:config["n_seeds"]]:
-        config["seed"] = seed
-        config = json.loads(json.dumps(config).replace('\"' + SEED_PLACEHOLDER + '\"', str(seed)))
+        config_copy = deepcopy(config)
+        config_copy["seed"] = seed
+        config_copy = json.loads(json.dumps(config_copy).replace('\"' + SEED_PLACEHOLDER + '\"', str(seed)))
         
         exp_results = {
-            config['model']["model_description"] : do_experiment(config, device=device, verbose=3)
+            config_copy['model']["model_description"] : do_experiment(config_copy, device=device, verbose=3)
         }
         
         all_results.append(exp_results)
-        with open(os.path.join(config["log_path"], "all_results_" + config["model"]["model_description"].replace(" ", "_").replace("/", ".")), "w") as f:
+        with open(os.path.join(config_copy["log_path"], "all_results_" + config_copy["model"]["model_description"].replace(" ", "_").replace("/", ".")), "w") as f:
             json.dump(exp_results, f, indent=4, ensure_ascii=False)
         with open("current_results.json", "w") as f:
             json.dump(all_results, f, indent=4, ensure_ascii=False)

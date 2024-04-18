@@ -5,8 +5,9 @@
     "log_path": "logs/",
     "hash": "0",
     "run_hash": "0",
+    "run_name": "test",
     "seed": 0,
-    "n_seeds": 1,
+    "n_seeds": 3,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -29,8 +30,8 @@
                     "t_max": null
                 },
                 "steps": {
-                    "start_epoch": 0,
-                    "end_epoch": 1,
+                    "start_epoch": 10,
+                    "end_epoch": 85,
                     "step_max": null
                 }
             }
@@ -274,12 +275,12 @@
                         "hard"
                     ]
                 ],
-                "n_bootstraps": 10
+                "n_bootstraps": 1000
             }
         ],
         "ml_metric_prefix": "clf"
     },
     "logger": {
-        "log_type": "none"
+        "log_type": "wandb"
     }
 }

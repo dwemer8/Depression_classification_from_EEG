@@ -107,13 +107,15 @@ def preprocessDepressionAnonymizedData(
     directory, 
     epoch_folders, 
     picked_channels, 
+    metadata=None,
     **kwargs
 ):
     chunks_list = []
     
     for epoch_folder in epoch_folders:
         print(epoch_folder)
-        data_epoch_descr = pd.read_csv(directory + epoch_folder + "path_file.csv")
+        if metadata is not None: data_epoch_descr = pd.read_csv(metadata)
+        else: data_epoch_descr = pd.read_csv(directory + epoch_folder + "path_file.csv")
         data_epoch_list = readDataExt_one(directory + epoch_folder, exclude={"path_file.csv"}, is_list=True)
     
         for df in tqdm(data_epoch_list):
