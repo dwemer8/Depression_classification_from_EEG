@@ -35,10 +35,10 @@ def seed_all(SEED):
     random.seed(SEED)
     os.environ['PYTHONHASHSEED'] = str(SEED)
 
-def printLog(s, logfile=None):
-    print(s)
+def printLog(*args, logfile=None, **kwargs):
+    print(*args, **kwargs)
     if logfile is not None:
-        print(s, file=logfile)
+        print(*args, file=logfile, **kwargs)
 
 def upd(config, d):
     '''

@@ -10,6 +10,7 @@ from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 
 from utils import DEFAULT_SEED
+from utils.common import printLog
 
 # import pandas as pd
 
@@ -171,24 +172,24 @@ def plotSamplesFromDataset(dataset):
     for i in range(3): ax[i].plot(dataset[np.random.choice(list(range(len(dataset))))].squeeze().T)
     plt.show()
 
-def printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None):
+def printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None, logfile=None):
     if pretrain_dataset is not None: print("Pretrain dataset:", len(pretrain_dataset))
-    print("Train dataset:", len(train_dataset))
-    print("Val dataset:", len(val_dataset))
-    print("Test dataset:", len(test_dataset))
+    printLog("Train dataset:", len(train_dataset), logfile=logfile)
+    printLog("Val dataset:", len(val_dataset), logfile=logfile)
+    printLog("Test dataset:", len(test_dataset), logfile=logfile)
 
     if pretrain_dataset is not None: print("Pretrain sample shape:", pretrain_dataset[0].shape)
-    print("Train sample shape:", train_dataset[0].shape)
-    print("Val sample shape:", val_dataset[0].shape)
-    print("Test sample shape:", test_dataset[0].shape)
+    printLog("Train sample shape:", train_dataset[0].shape, logfile=logfile)
+    printLog("Val sample shape:", val_dataset[0].shape, logfile=logfile)
+    printLog("Test sample shape:", test_dataset[0].shape, logfile=logfile)
 
     if pretrain_dataset is not None: print("Pretrain sample type:", pretrain_dataset[0].type())
-    print("Train sample type:", train_dataset[0].type())
-    print("Val sample type:", val_dataset[0].type())
-    print("Test sample type:", test_dataset[0].type())
+    printLog("Train sample type:", train_dataset[0].type(), logfile=logfile)
+    printLog("Val sample type:", val_dataset[0].type(), logfile=logfile)
+    printLog("Test sample type:", test_dataset[0].type(), logfile=logfile)
 
-def printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None):
+def printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None, logfile=None):
     if pretrain_dataloader is not None: print("Pretrain dataloader:", len(pretrain_dataloader))
-    print("Train dataloader:", len(train_dataloader))
-    print("Val dataloader:", len(val_dataloader))
-    print("Test dataloader:", len(test_dataloader))
+    printLog("Train dataloader:", len(train_dataloader), logfile=logfile)
+    printLog("Val dataloader:", len(val_dataloader), logfile=logfile)
+    printLog("Test dataloader:", len(test_dataloader), logfile=logfile)

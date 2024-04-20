@@ -6,9 +6,11 @@ import os
 import sys
 import pickle
 import json
+from copy import deepcopy
+from tqdm.auto import tqdm as tqdm_auto
+
 from IPython.display import display
 import traceback
-from tqdm.auto import tqdm as tqdm_auto
 
 import numpy as np
 import pandas as pd
@@ -135,7 +137,7 @@ def do_experiment(config, device="cpu", verbose=0):
         )
     
         if verbose - 2 > 0: 
-            printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None if pretrain_config is None else pretrain_dataset)
+            printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None if pretrain_config is None else pretrain_dataset, logfile=logfile)
             if config.get("display_mode", "terminal") == "ipynb": plotSamplesFromDataset(train_dataset)
     
         #Dataloader
@@ -144,7 +146,7 @@ def do_experiment(config, device="cpu", verbose=0):
         val_dataloader = DataLoader(val_dataset, shuffle=False, **config["dataset"]['dataloader'])
         test_dataloader = DataLoader(test_dataset, shuffle=False, **config["dataset"]['dataloader'])
     
-        if verbose - 2 > 0: printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None if pretrain_config is None else pretrain_dataloader)
+        if verbose - 2 > 0: printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None if pretrain_config is None else pretrain_dataloader, logfile=logfile)
     
         #Model
         config["model"].update({
@@ -153,7 +155,7 @@ def do_experiment(config, device="cpu", verbose=0):
         model, config["model"] = get_model(config["model"])
         model = model.to(device)
         if verbose - 1 > 0: printLog('model ' + config["model"]['model_description'] + ' is created', logfile=logfile)
-        if verbose - 2 > 0: printLog(model)
+        if verbose - 2 > 0: printLog(model, logfile=logfile)
     
         #Download weights
         if "artifact" in config["model"] and "file" in config["model"]:
@@ -202,10 +204,11 @@ def do_experiment(config, device="cpu", verbose=0):
         seed_all(config["seed"])
     
         #training
-        # best_loss = np.inf
+        best_loss = np.inf
         best_clf_accuracy = -1
         best_model = None
         best_epoch = None
+        final_epoch = None
         final_model = None
 
         for curr_dataloader, dataset_config in zip(
@@ -240,6 +243,7 @@ def do_experiment(config, device="cpu", verbose=0):
                 )
                 if results == {}: break
                 if verbose > 0: 
+                    #printLog doesn't used in order to display nice table
                     if config.get("display_mode", "terminal") == "ipynb": display(dict_to_df(results))
                     else: print(dict_to_df(results).T)
                     for k in results: 
@@ -276,37 +280,39 @@ def do_experiment(config, device="cpu", verbose=0):
                     print(json.dumps(results, indent=4), file=logfile)
         
                 scheduler.step(results['loss'])
-                # logger.save_model(epoch)
-                final_model = model
         
                 zero_ml_tag = config["ml"]["ml_eval_function_tag"][0]
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
                 accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.accuracy'
                 if results.get(accuracy_tag, -np.inf) > best_clf_accuracy:
                     best_clf_accuracy = results[accuracy_tag]
-                    best_model = model
+                    best_model = deepcopy(model)
                     best_epoch = epoch
                     if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
                 
-                # if results['loss'] < best_loss:
-                #     best_loss = results['loss']
-                #     best_model = model
-                #     best_epoch = best_epoch
-                #     if verbose > 0: printLog(f"New best loss = {best_loss} on epoch {epoch}", logfile=logfile)
+                if results['loss'] < best_loss:
+                    best_loss = results['loss']
+                    final_model = deepcopy(model)
+                    final_epoch = epoch
+                    if verbose > 0: printLog(f"New best loss = {best_loss} on epoch {epoch}", logfile=logfile)
                 
                 if early_stopper.early_stop(results['loss']): break
-        
-            # if curr_dataloader == train_dataloader: logger.save_model(dataset_config["steps"]['end_epoch'])
+
+        logger.save_model(dataset_config["steps"]['end_epoch'], model)
+        logger.save_model(final_epoch, final_model)
+        logger.update_summary("validation.final_epoch", final_epoch)
+        logger.save_model(best_epoch, best_model)
+        logger.update_summary("validation.best_epoch", best_epoch)
     
         ######
         # test
         ######
         results_all = {}
-        for model, mode in zip([final_model, best_model], ["final", "test"]):
+        for tested_model, mode in zip([final_model, best_model], ["final", "test"]):
             if verbose > 0: printLog(f"##### Testing in {mode} mode... #####", logfile=logfile)
             _, results = train_eval(
                 test_dataloader,
-                model,
+                tested_model,
                 device=device,
                 mode=mode,
                 test_dataset=test_dataset,
@@ -329,11 +335,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     if type(results[k]) == np.ndarray: results[k] = float(results[k].tolist())
                 print(json.dumps(results, indent=4), file=logfile)
         
-        logger.save_model(dataset_config["steps"]['end_epoch'], final_model)
-        logger.save_model(best_epoch, best_model)
-        logger.update_summary("validation.best_epoch", best_epoch)
         logger.finish()
-
         logfile.close()
         return results_all
         

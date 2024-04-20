@@ -114,7 +114,7 @@ default_config = {
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 3, #no more than length of FIXED_SEEDS
+    "n_seeds": 1, #no more than length of FIXED_SEEDS from utils
     "display_mode": "terminal", #ipynb/terminal
     
     "dataset": dataset_config,
@@ -134,114 +134,114 @@ with open("configs/default_config.json", "w") as f: json.dump(default_config, f,
 
 import itertools
 
-# experiments = [default_config]
-experiments = []
-for is_pretrain in [
-    False,
-    True
-]:
-    hash = hex(random.getrandbits(32))
-    default_config.update({"hash": hash})
-    dc = Config(default_config)
-    for t in [
-        1, 
-        5, 
-        10, 
-        15, 
-        30, 
-        60
-    ]:
-        if is_pretrain:
-            train_config = {
-                "pretrain": {
-                    "source":{
-                        "name": "TUAB",
-                        "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
-                    },
-                    "size": None,
-                    "n_samples": None, #will be updated in train function,
-                    "preprocessing":{
-                        "is_squeeze": False, 
-                        "is_unsqueeze": False, 
-                        "t_max": None
-                    },
-                    "steps": {
-                        "start_epoch": 0, # including
-                        "end_epoch": 5, # excluding,
-                        "step_max" : None #!!CHECK
-                    }
-                },
-                "train": {
-                    "source":{
-                        "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                    },
-                    "steps": {
-                        "start_epoch": 5,
-                        "end_epoch": 80,
-                    }
-                }
-            }
-        else:
-            train_config = {
-                "pretrain": None,
-                "train": {
-                    "source":{
-                        "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                    },
-                    "steps": {
-                        "start_epoch": 0,
-                        "end_epoch": 75,
-                    }
-                },
-            }
+experiments = [default_config]
+# experiments = []
+# for is_pretrain in [
+#     False,
+#     True
+# ]:
+#     hash = hex(random.getrandbits(32))
+#     default_config.update({"hash": hash})
+#     dc = Config(default_config)
+#     for t in [
+#         1, 
+#         5, 
+#         10, 
+#         15, 
+#         30, 
+#         60
+#     ]:
+#         if is_pretrain:
+#             train_config = {
+#                 "pretrain": {
+#                     "source":{
+#                         "name": "TUAB",
+#                         "file": TUAB_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl",
+#                     },
+#                     "size": None,
+#                     "n_samples": None, #will be updated in train function,
+#                     "preprocessing":{
+#                         "is_squeeze": False, 
+#                         "is_unsqueeze": False, 
+#                         "t_max": None
+#                     },
+#                     "steps": {
+#                         "start_epoch": 0, # including
+#                         "end_epoch": 5, # excluding,
+#                         "step_max" : None #!!CHECK
+#                     }
+#                 },
+#                 "train": {
+#                     "source":{
+#                         "name": "depression_anonymized",
+#                         "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+#                     },
+#                     "steps": {
+#                         "start_epoch": 5,
+#                         "end_epoch": 80,
+#                     }
+#                 }
+#             }
+#         else:
+#             train_config = {
+#                 "pretrain": None,
+#                 "train": {
+#                     "source":{
+#                         "name": "depression_anonymized",
+#                         "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+#                     },
+#                     "steps": {
+#                         "start_epoch": 0,
+#                         "end_epoch": 75,
+#                     }
+#                 },
+#             }
         
-        cc = dc.upd({
-            "run_name": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
-            "model":{
-                #!!CHECK
-                "model_description": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
-                "framework": {
-                    "latent_dim": t*16*5,
-                    "beta": 2,
-                    "first_decoder_conv_depth": 5,
-                    "loss_reduction" : "mean" #"mean"/"sum
-                },
-                "encoder": {
-                    "down_blocks_config": [
-                        {"in_channels": 3, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
-                        {"in_channels": 5, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
-                        {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
-                    ],
-                    "out_conv_config": {"in_channels": 10, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU", "normalize_last": False}
-                },
-                "decoder":{
-                    "in_conv_config": {"in_channels": 5, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU"},
-                    "up_blocks_config": [
-                        {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
-                        {"in_channels": 10, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
-                        {"in_channels": 5, "out_channels": 3, "kernel_size": 11, "n_convs": 1, "activation": "ELU", "normalize_last": False}
-                    ]
-                }
-            },
-            "dataset": {
-                "train": train_config,
-                "val": {
-                    "source":{
-                        "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                    },
-                },
-                "test": {
-                    "source":{
-                        "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-                    },
-                },
-            }
-        })
-        experiments.append(cc)
+#         cc = dc.upd({
+#             "run_name": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
+#             "model":{
+#                 #!!CHECK
+#                 "model_description": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
+#                 "framework": {
+#                     "latent_dim": t*16*5,
+#                     "beta": 2,
+#                     "first_decoder_conv_depth": 5,
+#                     "loss_reduction" : "mean" #"mean"/"sum
+#                 },
+#                 "encoder": {
+#                     "down_blocks_config": [
+#                         {"in_channels": 3, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+#                         {"in_channels": 5, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+#                         {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+#                     ],
+#                     "out_conv_config": {"in_channels": 10, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU", "normalize_last": False}
+#                 },
+#                 "decoder":{
+#                     "in_conv_config": {"in_channels": 5, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU"},
+#                     "up_blocks_config": [
+#                         {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+#                         {"in_channels": 10, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+#                         {"in_channels": 5, "out_channels": 3, "kernel_size": 11, "n_convs": 1, "activation": "ELU", "normalize_last": False}
+#                     ]
+#                 }
+#             },
+#             "dataset": {
+#                 "train": train_config,
+#                 "val": {
+#                     "source":{
+#                         "name": "depression_anonymized",
+#                         "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+#                     },
+#                 },
+#                 "test": {
+#                     "source":{
+#                         "name": "depression_anonymized",
+#                         "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+#                     },
+#                 },
+#             }
+#         })
+#         experiments.append(cc)
 
 print("N experiments:", len(experiments))
 for exp in experiments:

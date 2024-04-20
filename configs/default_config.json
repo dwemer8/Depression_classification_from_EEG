@@ -30,8 +30,8 @@
                     "t_max": null
                 },
                 "steps": {
-                    "start_epoch": 10,
-                    "end_epoch": 85,
+                    "start_epoch": 0,
+                    "end_epoch": 1,
                     "step_max": null
                 }
             }
@@ -281,6 +281,6 @@
         "ml_metric_prefix": "clf"
     },
     "logger": {
-        "log_type": "wandb"
+        "log_type": "none"
     }
 }
