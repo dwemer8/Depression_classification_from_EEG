@@ -7,7 +7,7 @@
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 3,
+    "n_seeds": 1,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -211,7 +211,7 @@
         ],
         "ml_eval_function_kwargs": [
             {
-                "verbose": 0,
+                "verbose": 10,
                 "test_size": 0.33,
                 "seed": "{SEED}",
                 "cv_scorer": "accuracy_score",

@@ -1,9 +1,11 @@
 import numpy as np
+import pandas as pd
 import scipy.stats as sts
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 from sklearn.metrics import make_scorer, confusion_matrix, accuracy_score, f1_score, average_precision_score, roc_auc_score
 from sklearn.model_selection import cross_val_score
+from IPython.display import display
 
 from confusion_matrix.cf_matrix import make_confusion_matrix
 from .plotting import printScores, plotROC, plotPR

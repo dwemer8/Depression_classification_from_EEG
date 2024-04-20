@@ -240,6 +240,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     mask_ratio=config["train"]["masking"]["mask_ratio"],
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
+                    logfile=logfile,
                 )
                 if results == {}: break
                 if verbose > 0: 
@@ -269,6 +270,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     loss_reduction=config["model"]["loss_reduction"],
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
+                    logfile=logfile,
                     **config["ml"],
                 )
                 if results == {}: break
@@ -325,6 +327,7 @@ def do_experiment(config, device="cpu", verbose=0):
                 loss_reduction=config["model"]["loss_reduction"],
                 step_max=train_config["steps"]["step_max"], 
                 verbose=verbose,
+                logfile=logfile,
                 **config["ml"],
             )
             results_all[mode] = results

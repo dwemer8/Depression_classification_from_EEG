@@ -7,6 +7,7 @@ import numpy as np
 from models.VAE import VAE, BetaVAE_H, BetaVAE_B
 from models.AE import AE_framework
 from utils.plotting import plotData
+from utils.common import printLog
 
 def check_instance(object, types):
     for class_type in types:
@@ -83,13 +84,14 @@ def train_eval(
 
     avg_embeddings_over_time=False,
     verbose=0,
+    logfile=None
 ):  
     if mode == "train":
         model.train()
-        if verbose - 1 > 0: print("Model is in train mode")
+        if verbose - 1 > 0: printLog("Model is in train mode", logfile=logfile)
     else:
         model.eval()
-        if verbose - 1 > 0: print("Model is in evaluation mode")
+        if verbose - 1 > 0: printLog("Model is in evaluation mode", logfile=logfile)
 
     try:
         logger.reset()
@@ -215,7 +217,7 @@ def train_eval(
 
                 if np.any(np.isnan(X)): 
                     nan_indexes = np.where(np.isnan(X))
-                    print("Test dataset sample:", test_dataset[nan_indexes[0]], "Embedding:", embeddings_test[nan_indexes[0]])
+                    printLog("Test dataset sample:", test_dataset[nan_indexes[0]], "Embedding:", embeddings_test[nan_indexes[0]], logfile=logfile)
                     raise ValueError("NaN in embeddings")
                 if np.any(np.isnan(y)): 
                     raise ValueError("NaN in targets")
@@ -234,16 +236,16 @@ def train_eval(
                     buffer_cnt = 0
                 buffer_cnt += 1
 
-                print(f"Epoch {epoch}, step {step}")
+                printLog(f"Epoch {epoch}, step {step}", logfile=logfile)
 
                 #pca embeddnigs
-                if verbose - 1 > 0: print("Plotting PCA...")
+                if verbose - 1 > 0: printLog("Plotting PCA...", logfile=logfile)
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
                 fig, ax = plt.subplots(1, 2, figsize=(12, 3))
                 plotData(X, y, method="pca", ax=ax[0], plot_type=plot_type)
                 
                 #plot reconstruction
-                if verbose - 1 > 0: print("Plotting reconstruction...")
+                if verbose - 1 > 0: printLog("Plotting reconstruction...", logfile=logfile)
                 ax[1].plot(imgs[0].squeeze()[0], label="data", color="b", marker="o")
                 if mode == "train": model.eval()
                 imgs_reconstructed = model.reconstruct(imgs.to(device))
@@ -252,7 +254,7 @@ def train_eval(
                 plt.show()
 
                 end_plotting_time = time.time()
-                if verbose - 2 > 0: print(f"Plotting time: {end_plotting_time - start_plotting_time} s")
+                if verbose - 2 > 0: printLog(f"Plotting time: {end_plotting_time - start_plotting_time} s", logfile=logfile)
 
             #classifier/regressor metrics evaluation
             if (check_period is not None and step % check_period == 0) or\
@@ -261,23 +263,23 @@ def train_eval(
                 
                 if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
 
-                if verbose - 1 > 0: print("Classifier/regressor metrics evaluation...")
+                if verbose - 1 > 0: printLog("Classifier/regressor metrics evaluation...", logfile=logfile)
                 X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
-                if verbose - 2 > 0: print("Embeddings shape:", X.shape)
+                if verbose - 2 > 0: printLog("Embeddings shape:", X.shape, logfile=logfile)
                 results = {}
                 for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
-                    results[tag] = (func(X, y, ml_model, ml_param_grid, **kwargs))
+                    results[tag] = (func(X, y, ml_model, ml_param_grid, logfile=logfile, **kwargs))
                 logger.update_other({ml_metric_prefix: results})
 
                 end_evaluation_time = time.time()
-                if verbose - 2 > 0: print(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s")
+                if verbose - 2 > 0: printLog(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s", logfile=logfile)
 
             #break
             if step_max is not None and step >= step_max:
                 break
 
         end_epoch_time = time.time()
-        if verbose - 2 > 0: print(f"Epoch time: {end_epoch_time - start_epoch_time} s")
+        if verbose - 2 > 0: printLog(f"Epoch time: {end_epoch_time - start_epoch_time} s", logfile=logfile)
         
         #logging final results
         logger.average()
