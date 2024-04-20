@@ -19,26 +19,27 @@ def save_preprocessed_data(chunks_list, file):
     with open(file, "wb") as f:
         pickle.dump(chunks_list, f)
 
-def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None):
+def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=None):
     chunks = []
     start_idx = 0
     end_idx = start_idx + n_samples_per_chunk
+    if step is None: step = n_samples_per_chunk
 
     while end_idx <= df.shape[0]:
-        if n_chunks_max != None and len(chunks) >= n_chunks_max:
+        if n_chunks_max is not None and len(chunks) >= n_chunks_max:
             break
         
         chunk = df.iloc[start_idx:end_idx]
         if len(chunk) != n_samples_per_chunk:
             print(f"WARNING: chunk shape = {chunk.shape}")
-            start_idx = end_idx
-            end_idx += n_samples_per_chunk
+            start_idx += step 
+            end_idx += step
             continue
 
         #std = 5 threshold
         if chunk[ch_names].to_numpy().std() >= 5:
-            start_idx = end_idx
-            end_idx += n_samples_per_chunk
+            start_idx += step 
+            end_idx += step
             continue
 
         # std t, t+1 threshold
@@ -55,8 +56,8 @@ def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None):
         #     continue
 
         chunks.append(chunk)
-        start_idx = end_idx
-        end_idx += n_samples_per_chunk
+        start_idx += step 
+        end_idx += step
 
     return chunks
 

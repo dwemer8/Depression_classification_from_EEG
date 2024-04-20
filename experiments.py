@@ -174,7 +174,7 @@ for is_pretrain in [
                 "train": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                     "steps": {
                         "start_epoch": 5,
@@ -188,7 +188,7 @@ for is_pretrain in [
                 "train": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                     "steps": {
                         "start_epoch": 0,
@@ -198,30 +198,30 @@ for is_pretrain in [
             }
         
         cc = dc.upd({
-            "run_name": f"64/64/64/3+SiLU, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
+            "run_name": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
             "model":{
                 #!!CHECK
-                "model_description": f"64/64/64/3+SiLU, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
+                "model_description": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
                 "framework": {
-                    "latent_dim": t*16*3,
+                    "latent_dim": t*16*5,
                     "beta": 2,
-                    "first_decoder_conv_depth": 3,
+                    "first_decoder_conv_depth": 5,
                     "loss_reduction" : "mean" #"mean"/"sum
                 },
                 "encoder": {
                     "down_blocks_config": [
-                        {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
-                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
-                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                        {"in_channels": 3, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+                        {"in_channels": 5, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+                        {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
                     ],
-                    "out_conv_config": {"in_channels": 64, "out_channels": 6, "kernel_size": 3, "n_convs": 1, "activation": "SiLU", "normalize_last": False}
+                    "out_conv_config": {"in_channels": 10, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU", "normalize_last": False}
                 },
                 "decoder":{
-                    "in_conv_config": {"in_channels": 3, "out_channels": 64, "kernel_size": 3, "n_convs": 1, "activation": "SiLU"},
+                    "in_conv_config": {"in_channels": 5, "out_channels": 10, "kernel_size": 5, "n_convs": 1, "activation": "ELU"},
                     "up_blocks_config": [
-                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 3, "activation": "SiLU"},
-                        {"in_channels": 64, "out_channels": 64, "kernel_size": 3, "n_convs": 3, "activation": "SiLU"},
-                        {"in_channels": 64, "out_channels": 3, "kernel_size": 3, "n_convs": 3, "activation": "SiLU", "normalize_last": False}
+                        {"in_channels": 10, "out_channels": 10, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+                        {"in_channels": 10, "out_channels": 5, "kernel_size": 11, "n_convs": 1, "activation": "ELU"},
+                        {"in_channels": 5, "out_channels": 3, "kernel_size": 11, "n_convs": 1, "activation": "ELU", "normalize_last": False}
                     ]
                 }
             },
@@ -230,13 +230,13 @@ for is_pretrain in [
                 "val": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                 },
                 "test": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                 },
             }
