@@ -199,13 +199,14 @@ def do_experiment(config, device="cpu", verbose=0):
         #parse ml config
         #NB:should be just before training because replace names by objects
         config["ml"] = parse_ml_config(config["ml"])
+        config["ml_validation"] = parse_ml_config(config["ml_validation"])
     
         #seed
         seed_all(config["seed"])
     
         #training
         best_loss = np.inf
-        best_clf_accuracy = -1
+        best_clf_accuracy = 0
         best_model = None
         best_epoch = None
         final_epoch = None
@@ -271,7 +272,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
                     logfile=logfile,
-                    **config["ml"],
+                    **config["ml_validation"],
                 )
                 if results == {}: break
                 if verbose > 0: 
@@ -283,10 +284,10 @@ def do_experiment(config, device="cpu", verbose=0):
         
                 scheduler.step(results['loss'])
         
-                zero_ml_tag = config["ml"]["ml_eval_function_tag"][0]
+                zero_ml_tag = config["ml_validation"]["ml_eval_function_tag"][0]
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
                 accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.accuracy'
-                if results.get(accuracy_tag, -np.inf) > best_clf_accuracy:
+                if results.get(accuracy_tag, 0) > best_clf_accuracy:
                     best_clf_accuracy = results[accuracy_tag]
                     best_model = deepcopy(model)
                     best_epoch = epoch
@@ -312,31 +313,34 @@ def do_experiment(config, device="cpu", verbose=0):
         results_all = {}
         for tested_model, mode in zip([final_model, best_model], ["final", "test"]):
             if verbose > 0: printLog(f"##### Testing in {mode} mode... #####", logfile=logfile)
-            _, results = train_eval(
-                test_dataloader,
-                tested_model,
-                device=device,
-                mode=mode,
-                test_dataset=test_dataset,
-                targets_test=targets_test,
-                check_period=1e10,
-                plot_period=1e10 if config.get("display_mode", "terminal") == "ipynb" else None,
-                epoch=train_config["steps"]['end_epoch'],
-                logger=logger,
-                loss_coefs=config["train"]["loss_coefs"],
-                loss_reduction=config["model"]["loss_reduction"],
-                step_max=train_config["steps"]["step_max"], 
-                verbose=verbose,
-                logfile=logfile,
-                **config["ml"],
-            )
-            results_all[mode] = results
-            if verbose > 0: 
-                if config.get("display_mode", "terminal") == "ipynb": display(dict_to_df(results))
-                else: print(dict_to_df(results).T)
-                for k in results: 
-                    if type(results[k]) == np.ndarray: results[k] = float(results[k].tolist())
-                print(json.dumps(results, indent=4), file=logfile)
+            if tested_model is not None:
+                _, results = train_eval(
+                    test_dataloader,
+                    tested_model,
+                    device=device,
+                    mode=mode,
+                    test_dataset=test_dataset,
+                    targets_test=targets_test,
+                    check_period=1e10,
+                    plot_period=1e10 if config.get("display_mode", "terminal") == "ipynb" else None,
+                    epoch=train_config["steps"]['end_epoch'],
+                    logger=logger,
+                    loss_coefs=config["train"]["loss_coefs"],
+                    loss_reduction=config["model"]["loss_reduction"],
+                    step_max=train_config["steps"]["step_max"], 
+                    verbose=verbose,
+                    logfile=logfile,
+                    **config["ml"],
+                )
+                results_all[mode] = results
+                if verbose > 0: 
+                    if config.get("display_mode", "terminal") == "ipynb": display(dict_to_df(results))
+                    else: print(dict_to_df(results).T)
+                    for k in results: 
+                        if type(results[k]) == np.ndarray: results[k] = float(results[k].tolist())
+                    print(json.dumps(results, indent=4), file=logfile)
+            else:
+                printLog(f"WARNING:{mode} model is None", logfile=logfile)
         
         logger.finish()
         logfile.close()

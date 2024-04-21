@@ -19,8 +19,8 @@
                 "t_max": null
             },
             "steps": {
-                "start_epoch": 0, # including #!!CHECK
-                "end_epoch": 1, # excluding, #!!CHECK
+                "start_epoch": 5, # including #!!CHECK
+                "end_epoch": 80, # excluding, #!!CHECK
                 "step_max" : null #!!CHECK
             }
         }

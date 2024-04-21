@@ -1,6 +1,6 @@
 import time
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import make_scorer, f1_score, accuracy_score, average_precision_score, roc_auc_score, mean_squared_error as mse
+from sklearn.metrics import make_scorer, balanced_accuracy_score, f1_score, accuracy_score, average_precision_score, roc_auc_score, mean_squared_error as mse
 from sklearn.model_selection import GridSearchCV, StratifiedKFold, KFold
 from copy import deepcopy
 
@@ -22,11 +22,11 @@ def evaluateClassifier(
     verbose=1,
     test_size=0.33,
     seed=DEFAULT_SEED,
-    cv_scorer=accuracy_score,
+    cv_scorer=balanced_accuracy_score,
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
-    evaluate_on_train=True,
+    evaluate_on_train=False,
     logfile=None
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):

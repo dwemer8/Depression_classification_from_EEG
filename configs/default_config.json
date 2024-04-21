@@ -7,7 +7,7 @@
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 1,
+    "n_seeds": 3,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -30,8 +30,8 @@
                     "t_max": null
                 },
                 "steps": {
-                    "start_epoch": 0,
-                    "end_epoch": 1,
+                    "start_epoch": 5,
+                    "end_epoch": 80,
                     "step_max": null
                 }
             }
@@ -214,7 +214,8 @@
                 "verbose": 10,
                 "test_size": 0.33,
                 "seed": "{SEED}",
-                "cv_scorer": "accuracy_score",
+                "evaluate_on_train": true,
+                "cv_scorer": "balanced_accuracy_score",
                 "metrics": [
                     [
                         "balanced_accuracy_score",
@@ -280,7 +281,56 @@
         ],
         "ml_metric_prefix": "clf"
     },
+    "ml_validation": {
+        "avg_embeddings_over_time": true,
+        "plot_type": "classification",
+        "ml_model": {
+            "scaler": "preprocessing.StandardScaler",
+            "clf": "svm.SVC"
+        },
+        "ml_param_grid": {
+            "clf__C": [
+                1
+            ],
+            "clf__class_weight": [
+                "balanced"
+            ],
+            "clf__random_state": [
+                "{SEED}"
+            ],
+            "clf__kernel": [
+                "linear"
+            ],
+            "clf__probability": [
+                true
+            ]
+        },
+        "ml_eval_function": [
+            "evaluateClassifier"
+        ],
+        "ml_eval_function_tag": [
+            "d"
+        ],
+        "ml_eval_function_kwargs": [
+            {
+                "verbose": 10,
+                "test_size": 0.33,
+                "seed": "{SEED}",
+                "evaluate_on_train": false,
+                "cv_scorer": "balanced_accuracy_score",
+                "metrics": [],
+                "metrics_for_CI": [
+                    [
+                        "balanced_accuracy_score",
+                        "hard"
+                    ]
+                ],
+                "n_bootstraps": 100
+            }
+        ],
+        "ml_metric_prefix": "clf"
+    },
     "logger": {
-        "log_type": "none"
+        "log_type": "wandb"
     }
 }

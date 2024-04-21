@@ -7,7 +7,7 @@
         #"clf": "linear_model.LogisticRegression"
     },
     "ml_param_grid" : {
-        "clf__C": [0.1, 1, 10],
+        "clf__C": [1],
         "clf__class_weight": ["balanced"],
         "clf__random_state": [{SEED}],
         
@@ -39,11 +39,11 @@
             "verbose" : 10,
             "test_size" : 0.33,
             "seed" : {SEED},
-            "evaluate_on_train": true,
+            "evaluate_on_train": false,
             "cv_scorer" : "balanced_accuracy_score",
-            "metrics" : [["balanced_accuracy_score", "hard"], ["recall_score", "hard"], ["precision_score", "hard"], ["average_precision_score", "soft"], ["roc_auc_score", "soft"], ["f1_score", "hard"], ["accuracy_score", "hard"]],
-            "metrics_for_CI": [["balanced_accuracy_score", "hard"], ["recall_score", "hard"], ["precision_score", "hard"], ["average_precision_score", "soft"], ["roc_auc_score", "soft"], ["f1_score", "hard"], ["accuracy_score", "hard"]],
-            "n_bootstraps" : 1000 #!!CHECK
+            "metrics" : [],
+            "metrics_for_CI": [["balanced_accuracy_score", "hard"]],
+            "n_bootstraps" : 100 #!!CHECK
         }
     ],
     "ml_metric_prefix" : "clf"

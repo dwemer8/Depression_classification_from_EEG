@@ -131,7 +131,7 @@ def train_eval(
     
             #frequency
             Foutputs = torch.fft.fft(outputs)
-            Foutputs_abs = torch.nn.functional.normalize(torch.abs(outputs), dim=sum_dims[-1])
+            Foutputs_abs = torch.nn.functional.normalize(torch.abs(Foutputs), dim=sum_dims[-1])
             Fimgs = torch.fft.fft(imgs.to(device))
             Fimgs_abs = torch.nn.functional.normalize(torch.abs(Fimgs), dim=sum_dims[-1])
             loss_frq = reduce_func((Foutputs_abs - Fimgs_abs)**2, sum_dims).mean()
