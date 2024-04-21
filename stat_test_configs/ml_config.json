@@ -22,7 +22,7 @@
         {
             "verbose" : 10,
             "test_size" : 0.33,
-            "SEED" : {SEED},
+            "seed" : {SEED},
             "cv_scorer" : "accuracy_score",
             "metrics_for_CI": [["average_precision_score", "soft"]], #["roc_auc_score", "soft"], ["accuracy_score", "hard"], ["f1_score", "hard"]],
             "n_bootstraps" : 1000 #!!CHECK

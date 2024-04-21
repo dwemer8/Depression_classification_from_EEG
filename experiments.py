@@ -144,20 +144,19 @@ import itertools
 # experiments = [default_config]
 experiments = []
 for is_pretrain in [
-    # False,
+    False,
     True
 ]:
-    # hash = hex(random.getrandbits(32))
-    # default_config.update({"hash": hash})
-    default_config.update({"hash": "0x868e5655"})
+    hash = hex(random.getrandbits(32))
+    default_config.update({"hash": hash})
     dc = Config(default_config)
     for t in [
-        # 60,
-        # 30,
-        # 15, 
+        60,
+        30,
+        15, 
         # 10, 
-        5,
-        1
+        # 5,
+        # 1
     ]:
         if is_pretrain:
             train_config = {
@@ -182,7 +181,7 @@ for is_pretrain in [
                 "train": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                     "steps": {
                         "start_epoch": 5,
@@ -196,7 +195,7 @@ for is_pretrain in [
                 "train": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                     "steps": {
                         "start_epoch": 0,
@@ -206,10 +205,10 @@ for is_pretrain in [
             }
         
         cc = dc.upd({
-            "run_name": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
+            "run_name": f"538813 'Improving...' arch, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"],
             "model":{
                 #!!CHECK
-                "model_description": f"538813 'Improving...' arch, 10-pct step, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
+                "model_description": f"538813 'Improving...' arch, {'finetune, ' if is_pretrain else ''}duration, {t} s, " + dc.config["model"]["model_description"], 
                 "framework": {
                     "latent_dim": t*16*5,
                     "beta": 2,
@@ -238,13 +237,13 @@ for is_pretrain in [
                 "val": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                 },
                 "test": {
                     "source":{
                         "name": "depression_anonymized",
-                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0_{t/10:.1f}.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+                        "file": DEPR_ANON_DIRECTORY + f"fz_cz_pz/dataset_128_{t}.0.pkl", #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
                     },
                 },
             }

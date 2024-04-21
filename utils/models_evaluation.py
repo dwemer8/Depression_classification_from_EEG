@@ -185,7 +185,7 @@ def get_bootstrap_classifier_values(
     verbose=1,
     test_size=0.33,
     seed=DEFAULT_SEED,
-    cv_scorer=accuracy_score,
+    cv_scorer=balanced_accuracy_score,
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
     logfile=None

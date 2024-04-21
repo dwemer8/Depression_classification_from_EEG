@@ -1,5 +1,5 @@
 {
-    "project_name": "EEG_depression_classification",
+    "project_name": "EEG_depression_classification-PR-AUC",
     "method": "direct restoration",
     "save_path": "model_weights/",
     "log_path": "logs/",
@@ -84,7 +84,7 @@
             "latent_dim": 512,
             "beta": 2,
             "first_decoder_conv_depth": 32,
-            "artifact": "dmitriykornilov_team/EEG_depression_classification/VAE_deep:v48",
+            "artifact": "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v48",
             "file": "85_epoch.pth"
         },
         "model2": {
@@ -94,7 +94,7 @@
             "latent_dim": 512,
             "beta": 2,
             "first_decoder_conv_depth": 32,
-            "artifact": "dmitriykornilov_team/EEG_depression_classification/VAE_deep:v24",
+            "artifact": "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
             "file": "50_epoch.pth"
         }
     },
@@ -144,7 +144,7 @@
                 "balanced"
             ],
             "clf__random_state": [
-                42
+                0
             ]
         },
         "ml_eval_function": [
@@ -157,7 +157,7 @@
             {
                 "verbose": 10,
                 "test_size": 0.33,
-                "SEED": 42,
+                "seed": 0,
                 "cv_scorer": "accuracy_score",
                 "metrics_for_CI": [
                     [

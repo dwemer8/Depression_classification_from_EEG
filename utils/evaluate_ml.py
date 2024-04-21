@@ -1,17 +1,9 @@
 import time
-
-import torch
-import matplotlib.pyplot as plt
 import numpy as np
-
-from models.VAE import VAE, BetaVAE_H, BetaVAE_B
-from models.AE import AE_framework
-from utils.plotting import plotData
 
 def evaluate_ml(
     model,
     device="cuda",
-    mode="evaluation", #train or something else
     test_dataset=None,
     targets_test=None,
     

@@ -39,68 +39,42 @@ print()
 print(f"{INHOUSE_DIRECTORY = }")
 print()
 
-
-# In[3]:
-
-
 import warnings
 warnings.simplefilter("ignore")
 
 import os
 import sys
-import pickle
 import json
-import random
-from IPython.display import display, clear_output
+from IPython.display import display
 import traceback
 
-import numpy as np
 import scipy.stats as sts
 import pandas as pd
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
-import matplotlib.pyplot as plt
 from matplotlib import rc
 rc('animation', html='jshtml')
 
-import sklearn
-from sklearn.preprocessing import StandardScaler
-from sklearn.pipeline import Pipeline
-from sklearn.svm import SVC
-from sklearn.linear_model import LinearRegression, Lasso, Ridge
-from sklearn.metrics import accuracy_score, f1_score, average_precision_score, roc_auc_score
-
-from tqdm.auto import tqdm as tqdm_auto
-
 import torch
-import torch.nn as nn
 from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
 import wandb
 wandb.login(key='1b8e8dc9dcf1a34397a04197c4826d3fe7441dae')
-
-import mne
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(device)
 
 sys.path.append(SRC_FOLDER)
 
-from utils import SEED
-from utils.common import objectName, seed_all, printLog, upd, Config, read_json_with_comments
-from utils.models_evaluation import evaluateClassifier, evaluateRegressor, evaluateClassifier_inner_outer_cv
+from utils import DEFAULT_SEED
+from utils.common import seed_all, printLog, upd, read_json_with_comments
 from utils.data_reading import DataReader
-from utils.plotting import dataset_hists, plotData, dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
+from utils.plotting import printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
 from utils.dataset import InMemoryDataset
-from utils.logger import Logger
 from utils.parser import parse_ml_config
-from utils.early_stopper import EarlyStopper
 from utils.evaluate_ml import evaluate_ml
 
 from models import get_model, load_weights_from_wandb
-
-from training import train_eval
 
 def stattest(config, verbose=0):
     try:
@@ -249,7 +223,7 @@ def stattest(config, verbose=0):
         config["ml"] = parse_ml_config(config["ml"])
     
         #seed
-        seed_all(SEED)
+        seed_all(DEFAULT_SEED)
           
         ######
         # test
@@ -260,7 +234,6 @@ def stattest(config, verbose=0):
             results = evaluate_ml(
                 model,
                 device=device,
-                mode=mode,
                 test_dataset=test_dataset,
                 targets_test=targets_test,
                 verbose=verbose,
@@ -295,12 +268,6 @@ def stattest(config, verbose=0):
             logfile.close()
         return {}
 
-
-# # Config
-
-# In[6]:
-
-
 train_config = read_json_with_comments("stat_test_configs/train_config.json")
 logger_config = read_json_with_comments("stat_test_configs/logger_config.json")
 dataset_config = read_json_with_comments(
@@ -314,7 +281,7 @@ dataset_config = read_json_with_comments(
 ml_config = read_json_with_comments(
     "stat_test_configs/ml_config.json",
     {
-        "{SEED}": str(SEED)
+        "{SEED}": str(DEFAULT_SEED)
     }
 )
 
@@ -326,7 +293,7 @@ model_config = {
         "latent_dim": 16*32,
         "beta": 2,
         "first_decoder_conv_depth": 32,
-        "artifact" : "dmitriykornilov_team/EEG_depression_classification/VAE_deep:v48",
+        "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v48",
         "file": "85_epoch.pth"
     },
     "model2": {
@@ -336,13 +303,13 @@ model_config = {
         "latent_dim": 16*32,
         "beta": 2,
         "first_decoder_conv_depth": 32,
-        "artifact" : "dmitriykornilov_team/EEG_depression_classification/VAE_deep:v24",
+        "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
         "file": "50_epoch.pth"
     }
 }
 
 default_config = {
-    "project_name": 'EEG_depression_classification',
+    "project_name": 'EEG_depression_classification-PR-AUC',
     "method": "direct restoration",
     "save_path" : OUTPUT_FOLDER + 'model_weights/',
     "log_path" : OUTPUT_FOLDER + "logs/",
@@ -357,10 +324,6 @@ default_config = {
 }
 
 with open("stat_test_configs/default_config.json", "w") as f: json.dump(default_config, f, indent=4, ensure_ascii=False)
-    
-# # Experiments
-
-# In[7]:
 
 experiments = [default_config]
 all_results = []

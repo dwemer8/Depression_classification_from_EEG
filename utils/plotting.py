@@ -12,8 +12,6 @@ from sklearn.manifold import TSNE
 from utils import DEFAULT_SEED
 from utils.common import printLog
 
-# import pandas as pd
-
 def dict_to_df(results):
     return pd.DataFrame(dict([(key, [f"{value:.3f}"]) for key, value in results.items()]))
 
@@ -193,3 +191,8 @@ def printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretr
     printLog("Train dataloader:", len(train_dataloader), logfile=logfile)
     printLog("Val dataloader:", len(val_dataloader), logfile=logfile)
     printLog("Test dataloader:", len(test_dataloader), logfile=logfile)
+
+def plot_se(x, y, y_se=None, label=None, ax=plt, alpha=0.3, marker="."):
+    ax.plot(x, y, label=label, marker=marker)
+    if y_se is not None:
+        ax.fill_between(x, y - y_se, y + y_se, alpha=alpha)
