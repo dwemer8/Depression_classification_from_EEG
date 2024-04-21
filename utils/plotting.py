@@ -170,25 +170,25 @@ def plotSamplesFromDataset(dataset):
     for i in range(3): ax[i].plot(dataset[np.random.choice(list(range(len(dataset))))].squeeze().T)
     plt.show()
 
-def printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None, logfile=None):
+def printDatasetMeta(val_dataset, test_dataset, train_dataset=None, pretrain_dataset=None, logfile=None):
     if pretrain_dataset is not None: print("Pretrain dataset:", len(pretrain_dataset))
-    printLog("Train dataset:", len(train_dataset), logfile=logfile)
+    if train_dataset is not None: printLog("Train dataset:", len(train_dataset), logfile=logfile)
     printLog("Val dataset:", len(val_dataset), logfile=logfile)
     printLog("Test dataset:", len(test_dataset), logfile=logfile)
 
     if pretrain_dataset is not None: print("Pretrain sample shape:", pretrain_dataset[0].shape)
-    printLog("Train sample shape:", train_dataset[0].shape, logfile=logfile)
+    if train_dataset is not None: printLog("Train sample shape:", train_dataset[0].shape, logfile=logfile)
     printLog("Val sample shape:", val_dataset[0].shape, logfile=logfile)
     printLog("Test sample shape:", test_dataset[0].shape, logfile=logfile)
 
     if pretrain_dataset is not None: print("Pretrain sample type:", pretrain_dataset[0].type())
-    printLog("Train sample type:", train_dataset[0].type(), logfile=logfile)
+    if train_dataset is not None: printLog("Train sample type:", train_dataset[0].type(), logfile=logfile)
     printLog("Val sample type:", val_dataset[0].type(), logfile=logfile)
     printLog("Test sample type:", test_dataset[0].type(), logfile=logfile)
 
-def printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None, logfile=None):
+def printDataloaderMeta(val_dataloader, test_dataloader, train_dataloader=None, pretrain_dataloader=None, logfile=None):
     if pretrain_dataloader is not None: print("Pretrain dataloader:", len(pretrain_dataloader))
-    printLog("Train dataloader:", len(train_dataloader), logfile=logfile)
+    if train_dataloader is not None: printLog("Train dataloader:", len(train_dataloader), logfile=logfile)
     printLog("Val dataloader:", len(val_dataloader), logfile=logfile)
     printLog("Test dataloader:", len(test_dataloader), logfile=logfile)
 

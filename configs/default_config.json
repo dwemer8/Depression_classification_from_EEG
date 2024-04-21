@@ -7,7 +7,7 @@
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 3,
+    "n_seeds": 1,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -17,24 +17,7 @@
         "samples_shape": null,
         "train": {
             "pretrain": null,
-            "train": {
-                "source": {
-                    "name": "inhouse_dataset",
-                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
-                },
-                "size": null,
-                "n_samples": null,
-                "preprocessing": {
-                    "is_squeeze": false,
-                    "is_unsqueeze": false,
-                    "t_max": null
-                },
-                "steps": {
-                    "start_epoch": 5,
-                    "end_epoch": 80,
-                    "step_max": null
-                }
-            }
+            "train": null
         },
         "val": {
             "source": {
@@ -64,81 +47,14 @@
         }
     },
     "model": {
-        "model": "VAE_parametrized",
-        "model_description": "beta-VAE",
+        "model": "VAE_deep",
+        "model_description": "duration, inhouse_dataset, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
         "loss_reduction": "mean",
-        "framework": {
-            "latent_dim": 512,
-            "beta": 2,
-            "first_decoder_conv_depth": 32,
-            "loss_reduction": "mean"
-        },
-        "encoder": {
-            "down_blocks_config": [
-                {
-                    "in_channels": 3,
-                    "out_channels": 4,
-                    "kernel_size": 7,
-                    "n_convs": 2,
-                    "activation": "ReLU"
-                },
-                {
-                    "in_channels": 4,
-                    "out_channels": 8,
-                    "kernel_size": 7,
-                    "n_convs": 2,
-                    "activation": "ReLU"
-                },
-                {
-                    "in_channels": 8,
-                    "out_channels": 16,
-                    "kernel_size": 5,
-                    "n_convs": 2,
-                    "activation": "ReLU"
-                }
-            ],
-            "out_conv_config": {
-                "in_channels": 16,
-                "out_channels": 64,
-                "kernel_size": 3,
-                "n_convs": 2,
-                "activation": "ReLU",
-                "normalize_last": false
-            }
-        },
-        "decoder": {
-            "in_conv_config": {
-                "in_channels": 32,
-                "out_channels": 16,
-                "kernel_size": 3,
-                "n_convs": 2,
-                "activation": "ReLU"
-            },
-            "up_blocks_config": [
-                {
-                    "in_channels": 16,
-                    "out_channels": 8,
-                    "kernel_size": 3,
-                    "n_convs": 2,
-                    "activation": "ReLU"
-                },
-                {
-                    "in_channels": 8,
-                    "out_channels": 4,
-                    "kernel_size": 3,
-                    "n_convs": 2,
-                    "activation": "ReLU"
-                },
-                {
-                    "in_channels": 4,
-                    "out_channels": 3,
-                    "kernel_size": 1,
-                    "n_convs": 2,
-                    "activation": "ReLU",
-                    "normalize_last": false
-                }
-            ]
-        }
+        "latent_dim": 512,
+        "beta": 2,
+        "first_decoder_conv_depth": 32,
+        "artifact": "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
+        "file": "50_epoch.pth"
     },
     "optimizer": {
         "optimizer": "AdamW",
@@ -211,7 +127,7 @@
         ],
         "ml_eval_function_kwargs": [
             {
-                "verbose": 10,
+                "verbose": 0,
                 "test_size": 0.33,
                 "seed": "{SEED}",
                 "evaluate_on_train": true,
@@ -313,7 +229,7 @@
         ],
         "ml_eval_function_kwargs": [
             {
-                "verbose": 10,
+                "verbose": 0,
                 "test_size": 0.33,
                 "seed": "{SEED}",
                 "evaluate_on_train": false,
@@ -331,6 +247,6 @@
         "ml_metric_prefix": "clf"
     },
     "logger": {
-        "log_type": "wandb"
+        "log_type": "none"
     }
 }

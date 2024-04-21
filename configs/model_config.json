@@ -1,30 +1,10 @@
 {
-    "model": "VAE_parametrized",
-    "model_description": "beta-VAE", #!!CHECK
+    "model": "VAE_deep",
+    "model_description": "duration, inhouse_dataset, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
     "loss_reduction" : "mean",
-    "framework": {
-        "latent_dim": 512,
-        "beta": 2,
-        "first_decoder_conv_depth": 32,
-        "loss_reduction" : "mean" #"mean"/"sum
-    },
-    "encoder": {
-        "down_blocks_config": [
-            {"in_channels": 3, "out_channels": 4, "kernel_size": 7, "n_convs": 2, "activation": "ReLU"},
-            {"in_channels": 4, "out_channels": 8, "kernel_size": 7, "n_convs": 2, "activation": "ReLU"},
-            {"in_channels": 8, "out_channels": 16, "kernel_size": 5, "n_convs": 2, "activation": "ReLU"}
-        ],
-        "out_conv_config": {"in_channels": 16, "out_channels": 64, "kernel_size": 3, "n_convs": 2, "activation": "ReLU", "normalize_last": false}
-    },
-    "decoder":{
-        "in_conv_config": {"in_channels": 32, "out_channels": 16, "kernel_size": 3, "n_convs": 2, "activation": "ReLU"},
-        "up_blocks_config": [
-            {"in_channels": 16, "out_channels": 8, "kernel_size": 3, "n_convs": 2, "activation": "ReLU"},
-            {"in_channels": 8, "out_channels": 4, "kernel_size": 3, "n_convs": 2, "activation": "ReLU"},
-            {"in_channels": 4, "out_channels": 3, "kernel_size": 1, "n_convs": 2, "activation": "ReLU", "normalize_last": false}
-        ]
-    }
-    
-    # "artifact" : "dmitriykornilov_team/EEG_age_prediction/AE:v18",
-    # "file": "50_epoch.pth"
+    "latent_dim": 512,
+    "beta": 2,
+    "first_decoder_conv_depth": 32,
+    "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
+    "file": "50_epoch.pth"
 }

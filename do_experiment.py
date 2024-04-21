@@ -4,7 +4,6 @@ common libraries
 
 import os
 import sys
-import pickle
 import json
 from copy import deepcopy
 from tqdm.auto import tqdm as tqdm_auto
@@ -16,7 +15,7 @@ import numpy as np
 import pandas as pd
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.max_columns', 500)
-from matplotlib import rc, pyplot as plt
+from matplotlib import rc
 rc('animation', html='jshtml')
 
 import torch
@@ -25,10 +24,9 @@ from torch.utils.data import DataLoader
 '''
 Project libraries
 '''
-from utils.common import objectName, seed_all, printLog, upd, wrap_field
-from utils.models_evaluation import evaluateClassifier, evaluateRegressor, evaluateClassifier_inner_outer_cv
+from utils.common import seed_all, printLog, upd, wrap_field
 from utils.data_reading import DataReader
-from utils.plotting import dataset_hists, plotData, dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
+from utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
 from utils.dataset import InMemoryDataset
 from utils.logger import Logger
 from utils.parser import parse_ml_config
@@ -59,6 +57,7 @@ def do_experiment(config, device="cpu", verbose=0):
         train_config = config["dataset"]["train"]["train"]
         val_config = config["dataset"]["val"]
         test_config = config["dataset"]["test"]
+
         if pretrain_config is not None:
             pretrain_reader = DataReader(
                 pretrain_config["source"]["file"], 
@@ -68,8 +67,18 @@ def do_experiment(config, device="cpu", verbose=0):
             pretrain_set, _, _ = pretrain_reader.split(
                 train_size=pretrain_config["size"], val_size=0, test_size=0, seed=config["seed"]
             )
-        
-        if wrap_field(pretrain_config, 'source') != train_config["source"] == val_config["source"] == test_config["source"]:
+
+        if pretrain_config is None and train_config is None and val_config["source"] == test_config["source"]:
+            val_test_reader = DataReader(
+                test_config["source"]["file"],
+                dataset_type=test_config["source"]["name"],
+                verbose=(verbose-1),
+            )
+            _, val_set, test_set = val_test_reader.split(
+                train_size=0, val_size=val_config["size"], test_size=test_config["size"], seed=config["seed"]
+            )
+
+        elif wrap_field(pretrain_config, 'source') != train_config["source"] == val_config["source"] == test_config["source"]:
             reader = DataReader(
                 train_config["source"]["file"], 
                 dataset_type=train_config["source"]["name"],
@@ -102,8 +111,9 @@ def do_experiment(config, device="cpu", verbose=0):
             raise NotImplementedError("Unsupported datasets configuration")
 
         if pretrain_config is not None: chunks_pretrain, targets_pretrain = pretrain_set["chunk"], pretrain_set["target"]
-        chunks_train, chunks_val, chunks_test = train_set["chunk"], val_set["chunk"], test_set["chunk"]
-        targets_train, targets_val, targets_test = train_set["target"], val_set["target"], test_set["target"]
+        if train_config is not None: chunks_train, targets_train = train_set["chunk"], train_set["target"]
+        chunks_val, chunks_test = val_set["chunk"], test_set["chunk"]
+        targets_val, targets_test = val_set["target"], test_set["target"]
 
         #TODO: add to upd function ability to add new fields
         if pretrain_config is not None: 
@@ -112,12 +122,15 @@ def do_experiment(config, device="cpu", verbose=0):
                     "pretrain": {"n_samples": len(chunks_pretrain)}
                 }
             })
+        if train_config is not None:
+            config["dataset"] = upd(config["dataset"], {
+                "train": {
+                    "train": {"n_samples": len(chunks_train)}
+                }
+            })
             
         config["dataset"] = upd(config["dataset"], {
-            "samples_shape": chunks_train[0].shape,
-            "train": {
-                "train": {"n_samples": len(chunks_train)}
-            },
+            "samples_shape": chunks_test[0].shape,
             "val": {"n_samples": len(chunks_val)},
             "test": {"n_samples": len(chunks_test)},
         })
@@ -126,9 +139,10 @@ def do_experiment(config, device="cpu", verbose=0):
             pretrain_dataset = InMemoryDataset(
                 chunks_pretrain, **pretrain_config["preprocessing"]
             )
-        train_dataset = InMemoryDataset(
-            chunks_train, **train_config["preprocessing"]
-        )
+        if train_config is not None: 
+            train_dataset = InMemoryDataset(
+                chunks_train, **train_config["preprocessing"]
+            )
         val_dataset = InMemoryDataset(
             chunks_val, **val_config["preprocessing"]
         )
@@ -137,20 +151,20 @@ def do_experiment(config, device="cpu", verbose=0):
         )
     
         if verbose - 2 > 0: 
-            printDatasetMeta(train_dataset, val_dataset, test_dataset, pretrain_dataset=None if pretrain_config is None else pretrain_dataset, logfile=logfile)
-            if config.get("display_mode", "terminal") == "ipynb": plotSamplesFromDataset(train_dataset)
+            printDatasetMeta(val_dataset, test_dataset, train_dataset=None if train_config is None else train_dataset, pretrain_dataset=None if pretrain_config is None else pretrain_dataset, logfile=logfile)
+            if config.get("display_mode", "terminal") == "ipynb": plotSamplesFromDataset(test_dataset)
     
         #Dataloader
         if pretrain_config is not None: pretrain_dataloader = DataLoader(pretrain_dataset, shuffle=True, **config["dataset"]['dataloader'])
-        train_dataloader = DataLoader(train_dataset, shuffle=True, **config["dataset"]['dataloader'])
+        if train_config is not None: train_dataloader = DataLoader(train_dataset, shuffle=True, **config["dataset"]['dataloader'])
         val_dataloader = DataLoader(val_dataset, shuffle=False, **config["dataset"]['dataloader'])
         test_dataloader = DataLoader(test_dataset, shuffle=False, **config["dataset"]['dataloader'])
     
-        if verbose - 2 > 0: printDataloaderMeta(train_dataloader, val_dataloader, test_dataloader, pretrain_dataloader=None if pretrain_config is None else pretrain_dataloader, logfile=logfile)
+        if verbose - 2 > 0: printDataloaderMeta(val_dataloader, test_dataloader, train_dataloader=None if train_config is None else train_dataloader, pretrain_dataloader=None if pretrain_config is None else pretrain_dataloader, logfile=logfile)
     
         #Model
         config["model"].update({
-            "input_dim" : train_dataset[0].shape,
+            "input_dim" : test_dataset[0].shape,
         })
         model, config["model"] = get_model(config["model"])
         model = model.to(device)
@@ -163,7 +177,7 @@ def do_experiment(config, device="cpu", verbose=0):
     
         # TESTS
         model.eval()
-        test_data_point = train_dataset[0][None].to(device)
+        test_data_point = test_dataset[0][None].to(device)
         inference_result = model(test_data_point)
         reconstruct_result = model.reconstruct(test_data_point)
         encode_result = model.encode(test_data_point)
@@ -213,7 +227,7 @@ def do_experiment(config, device="cpu", verbose=0):
         final_model = None
 
         for curr_dataloader, dataset_config in zip(
-            [None if pretrain_config is None else pretrain_dataloader, train_dataloader],
+            [None if pretrain_config is None else pretrain_dataloader, None if train_config is None else train_dataloader],
             [pretrain_config, train_config],  
         ):
             if dataset_config is None:
@@ -301,11 +315,17 @@ def do_experiment(config, device="cpu", verbose=0):
                 
                 if early_stopper.early_stop(results['loss']): break
 
-        logger.save_model(dataset_config["steps"]['end_epoch'], model)
-        logger.save_model(final_epoch, final_model)
-        logger.update_summary("validation.final_epoch", final_epoch)
-        logger.save_model(best_epoch, best_model)
-        logger.update_summary("validation.best_epoch", best_epoch)
+        if train_config is not None:
+            logger.save_model(train_config["steps"]['end_epoch'], model)
+            if final_epoch is not None:
+                logger.save_model(final_epoch, final_model)
+                logger.update_summary("validation.final_epoch", final_epoch)
+            if best_epoch is not None:
+                logger.save_model(best_epoch, best_model)
+                logger.update_summary("validation.best_epoch", best_epoch)
+        else:
+            final_model = model
+            final_epoch = 0
     
         ######
         # test
@@ -323,11 +343,11 @@ def do_experiment(config, device="cpu", verbose=0):
                     targets_test=targets_test,
                     check_period=1e10,
                     plot_period=1e10 if config.get("display_mode", "terminal") == "ipynb" else None,
-                    epoch=train_config["steps"]['end_epoch'],
+                    epoch=train_config["steps"]['end_epoch'] if train_config is not None else 0,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
                     loss_reduction=config["model"]["loss_reduction"],
-                    step_max=train_config["steps"]["step_max"], 
+                    step_max=train_config["steps"]["step_max"] if train_config is not None else None, 
                     verbose=verbose,
                     logfile=logfile,
                     **config["ml"],

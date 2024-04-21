@@ -6,24 +6,7 @@
     "samples_shape": null, #will be updated in train function
     "train": {
         "pretrain": null,
-        "train": {
-            "source":{
-                "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
-                "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-            },
-            "size": null,
-            "n_samples": null, #will be updated in train function,
-            "preprocessing":{
-                "is_squeeze": false, 
-                "is_unsqueeze": false, 
-                "t_max": null
-            },
-            "steps": {
-                "start_epoch": 5, # including #!!CHECK
-                "end_epoch": 80, # excluding, #!!CHECK
-                "step_max" : null #!!CHECK
-            }
-        }
+        "train": null
     },
     "val": {
         "source":{
