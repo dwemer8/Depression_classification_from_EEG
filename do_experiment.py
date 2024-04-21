@@ -29,7 +29,7 @@ from utils.data_reading import DataReader
 from utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
 from utils.dataset import InMemoryDataset
 from utils.logger import Logger
-from utils.parser import parse_ml_config
+from utils.parser import parse_ml_config, parse_dataset_preprocessing_config
 from utils.early_stopper import EarlyStopper
 
 from models import get_model, load_weights_from_wandb
@@ -137,17 +137,17 @@ def do_experiment(config, device="cpu", verbose=0):
 
         if pretrain_config is not None: 
             pretrain_dataset = InMemoryDataset(
-                chunks_pretrain, **pretrain_config["preprocessing"]
+                chunks_pretrain, **parse_dataset_preprocessing_config(pretrain_config["preprocessing"])
             )
         if train_config is not None: 
             train_dataset = InMemoryDataset(
-                chunks_train, **train_config["preprocessing"]
+                chunks_train, **parse_dataset_preprocessing_config(train_config["preprocessing"])
             )
         val_dataset = InMemoryDataset(
-            chunks_val, **val_config["preprocessing"]
+            chunks_val, **parse_dataset_preprocessing_config(val_config["preprocessing"])
         )
         test_dataset = InMemoryDataset(
-            chunks_test, **test_config["preprocessing"]
+            chunks_test, **parse_dataset_preprocessing_config(test_config["preprocessing"])
         )
     
         if verbose - 2 > 0: 
@@ -206,6 +206,7 @@ def do_experiment(config, device="cpu", verbose=0):
         #         log_dir = OUTPUT_FOLDER + "logs/"
         )
 
+        #Cannot be placed before get_model() since it updates config 
         #print whole config
         printLog('#################### ' + config["model"]["model_description"] + ' ####################', logfile=logfile)
         printLog(json.dumps(config, indent=4), logfile=logfile)

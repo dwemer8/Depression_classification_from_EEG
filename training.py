@@ -3,6 +3,7 @@ import time
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+from IPython.display import clear_output
 
 from models.VAE import VAE, BetaVAE_H, BetaVAE_B
 from models.AE import AE_framework
@@ -49,6 +50,35 @@ def mask_chunks(chunks, mask_ratio = 0.5):
                 
     return chunks
 
+def get_embeddings(
+    model, 
+    test_dataset, 
+    targets_test, 
+    avg_over_time=False,
+    mode="eval",
+    device="cpu",
+    logfile=None
+):
+    if mode == "train": model.eval()
+    embeddings_test = model.encode(test_dataset[:].to(device)).detach().cpu().numpy()
+    if avg_over_time: embeddings_test = embeddings_test.mean(-1) #TAKE MEAN OVER TIME AXIS
+    embeddings_test = embeddings_test.reshape(len(test_dataset), -1)
+    if mode == "train": model.train()
+
+    X = np.array(embeddings_test)
+    y = np.array(targets_test)
+
+    if np.any(np.isnan(X)): 
+        nan_indexes = np.where(np.isnan(X))
+        printLog("Test dataset sample:", test_dataset[nan_indexes[0]], "Embedding:", embeddings_test[nan_indexes[0]], logfile=logfile)
+        raise ValueError("NaN in embeddings")
+    if np.any(np.isnan(y)): 
+        raise ValueError("NaN in targets")
+
+    indices = list(range(len(X)))
+    np.random.shuffle(indices)
+    return X[indices], y[indices]
+
 def train_eval(
     dataloader,
     model,
@@ -84,7 +114,7 @@ def train_eval(
 
     avg_embeddings_over_time=False,
     verbose=0,
-    logfile=None
+    logfile=None,
 ):  
     if mode == "train":
         model.train()
@@ -199,33 +229,6 @@ def train_eval(
             if check_instance(model, [VAE, BetaVAE_H, BetaVAE_B]):
                 for key in ['-log p(x|z)', "kl"]: logger._append(key, results[key])
 
-            #embeddings
-            def get_embeddings(
-                model, 
-                test_dataset, 
-                targets_test, 
-                avg_over_time=False
-            ):
-                if mode == "train": model.eval()
-                embeddings_test = model.encode(test_dataset[:].to(device)).detach().cpu().numpy()
-                if avg_over_time: embeddings_test = embeddings_test.mean(-1) #TAKE MEAN OVER TIME AXIS
-                embeddings_test = embeddings_test.reshape(len(test_dataset), -1)
-                if mode == "train": model.train()
-
-                X = np.array(embeddings_test)
-                y = np.array(targets_test)
-
-                if np.any(np.isnan(X)): 
-                    nan_indexes = np.where(np.isnan(X))
-                    printLog("Test dataset sample:", test_dataset[nan_indexes[0]], "Embedding:", embeddings_test[nan_indexes[0]], logfile=logfile)
-                    raise ValueError("NaN in embeddings")
-                if np.any(np.isnan(y)): 
-                    raise ValueError("NaN in targets")
-
-                indices = list(range(len(X)))
-                np.random.shuffle(indices)
-                return X[indices], y[indices]
-
             #plotting
             if (plot_period is not None and step % plot_period == 0) or\
             (plot_steps is not None and step in plot_steps):
@@ -240,7 +243,15 @@ def train_eval(
 
                 #pca embeddnigs
                 if verbose - 1 > 0: printLog("Plotting PCA...", logfile=logfile)
-                X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
+                X, y = get_embeddings(
+                    model, 
+                    test_dataset, 
+                    targets_test, 
+                    avg_over_time=avg_embeddings_over_time, 
+                    mode=mode, 
+                    device=device, 
+                    logfile=logfile,
+                )
                 fig, ax = plt.subplots(1, 2, figsize=(12, 3))
                 plotData(X, y, method="pca", ax=ax[0], plot_type=plot_type)
                 
@@ -264,7 +275,15 @@ def train_eval(
                 if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
 
                 if verbose - 1 > 0: printLog("Classifier/regressor metrics evaluation...", logfile=logfile)
-                X, y = get_embeddings(model, test_dataset, targets_test, avg_over_time=avg_embeddings_over_time)
+                X, y = get_embeddings(
+                    model, 
+                    test_dataset, 
+                    targets_test, 
+                    avg_over_time=avg_embeddings_over_time, 
+                    mode=mode, 
+                    device=device, 
+                    logfile=logfile,
+                )
                 if verbose - 2 > 0: printLog("Embeddings shape:", X.shape, logfile=logfile)
                 results = {}
                 for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):

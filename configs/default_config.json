@@ -7,7 +7,7 @@
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 1,
+    "n_seeds": 3,
     "display_mode": "terminal",
     "dataset": {
         "dataloader": {
@@ -22,7 +22,7 @@
         "val": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
             },
             "size": 30,
             "n_samples": null,
@@ -35,14 +35,22 @@
         "test": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
             },
             "size": 30,
             "n_samples": null,
             "preprocessing": {
                 "is_squeeze": false,
                 "is_unsqueeze": false,
-                "t_max": null
+                "t_max": null,
+                "transforms": [
+                    "zero_out_channel"
+                ],
+                "transforms_kwargs": [
+                    {
+                        "channel": null
+                    }
+                ]
             }
         }
     },
@@ -127,10 +135,10 @@
         ],
         "ml_eval_function_kwargs": [
             {
-                "verbose": 0,
+                "verbose": 10,
                 "test_size": 0.33,
                 "seed": "{SEED}",
-                "evaluate_on_train": true,
+                "evaluate_on_train": false,
                 "cv_scorer": "balanced_accuracy_score",
                 "metrics": [
                     [
@@ -247,6 +255,6 @@
         "ml_metric_prefix": "clf"
     },
     "logger": {
-        "log_type": "none"
+        "log_type": "wandb"
     }
 }
