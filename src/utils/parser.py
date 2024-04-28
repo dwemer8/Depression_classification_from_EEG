@@ -5,7 +5,7 @@ import sklearn
 from sklearn.pipeline import Pipeline
 from functools import partial
 
-from .models_evaluation import *
+from ..evaluation.models_evaluation import *
 
 def get_pipeline(stages_config):
     stages_config = deepcopy(stages_config)
@@ -18,11 +18,11 @@ def get_pipeline(stages_config):
         ))
     return Pipeline(stages)
 
-def get_eval_functions(eval_functions_config, module_name="utils.models_evaluation"):
+def get_eval_functions(eval_functions_config, module_name="src.evaluation.models_evaluation"):
     eval_functions_config = deepcopy(eval_functions_config)
     funcs = []
     for k in eval_functions_config:
-        module = importlib.import_module(module_name, package='..')
+        module = importlib.import_module(module_name, package='../..')
         funcs.append(getattr(module, k))
     return funcs
 
@@ -49,7 +49,7 @@ def parse_ml_config(config):
 def parse_dataset_preprocessing_config(config):
     config = deepcopy(config)
     if 'transforms' in config and 'transforms_kwargs' in config:
-        config["transforms"] = get_eval_functions(config["transforms"], module_name="utils.callbacks")
+        config["transforms"] = get_eval_functions(config["transforms"], module_name="src.utils.callbacks")
         funcs = []
         for func, kwargs in zip(config["transforms"], config["transforms_kwargs"]):
             funcs.append(partial(func, **kwargs))

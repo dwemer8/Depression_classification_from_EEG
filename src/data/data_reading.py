@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm.auto import tqdm
 from sklearn.model_selection import train_test_split
 
-from utils import DEFAULT_SEED
+from src.utils import DEFAULT_SEED
 
 ##########################################################################
 #files

@@ -9,8 +9,8 @@ from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve, av
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.manifold import TSNE
 
-from utils import DEFAULT_SEED
-from utils.common import printLog
+from src.utils import DEFAULT_SEED
+from src.utils.common import printLog
 
 def dict_to_df(results):
     return pd.DataFrame(dict([(key, [f"{value:.3f}"]) for key, value in results.items()]))

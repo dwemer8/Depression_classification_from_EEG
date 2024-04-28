@@ -5,8 +5,8 @@ from sklearn.model_selection import GridSearchCV, StratifiedKFold, KFold
 from copy import deepcopy
 
 from .metrics_evaluation import evaluateMetrics, evaluateMetrics_cv, get_bootstrap_estimates_for_metrics
-from .common import get_object_name, printLog
-from utils import DEFAULT_SEED
+from ..utils.common import get_object_name, printLog
+from ..utils import DEFAULT_SEED
 
 
 

@@ -4,7 +4,7 @@ Because I used this notebook on number of machines, I implemented class especial
 You may not needed in one and use just simple definitions.
 '''
 
-from system_variables import SystemVariables
+from src.utils.system_variables import SystemVariables
 
 # choose system according your current machine
 # SYSTEM_NAME = "Windows"
@@ -66,15 +66,15 @@ print(device)
 
 sys.path.append(SRC_FOLDER)
 
-from utils import DEFAULT_SEED
-from utils.common import seed_all, printLog, upd, read_json_with_comments
-from utils.data_reading import DataReader
-from utils.plotting import printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
-from utils.dataset import InMemoryDataset
-from utils.parser import parse_ml_config
-from utils.evaluate_ml import evaluate_ml
+from src.utils import DEFAULT_SEED
+from src.utils.common import seed_all, printLog, upd, read_json_with_comments
+from src.data.data_reading import DataReader
+from src.utils.plotting import printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
+from src.data.dataset import InMemoryDataset
+from src.utils.parser import parse_ml_config
+from src.trainer.evaluate_ml import evaluate_ml
 
-from models import get_model, load_weights_from_wandb
+from src.models import get_model, load_weights_from_wandb
 
 def stattest(config, verbose=0):
     try:

@@ -8,8 +8,8 @@ from sklearn.model_selection import cross_val_score
 from IPython.display import display
 
 from confusion_matrix.cf_matrix import make_confusion_matrix
-from .plotting import printScores, plotROC, plotPR
-from .common import get_object_name
+from ..utils.plotting import printScores, plotROC, plotPR
+from ..utils.common import get_object_name
 
 def compute_bootstrapped_score(y_test, y_prob, scorer, m_sample=None, stratum_vals=None):
     idx = np.array(range(len(y_test)))

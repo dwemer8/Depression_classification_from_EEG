@@ -95,3 +95,9 @@ def wrap_field(d, field):
         return d[field]
     except:
         return {}
+    
+def check_instance(object, types):
+    for class_type in types:
+        if isinstance(object, class_type):
+            return True
+    return False

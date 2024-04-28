@@ -2,7 +2,7 @@
     "model": "VAE_deep",
     "model_description": "duration, inhouse_dataset, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
     "loss_reduction" : "mean",
-    "latent_dim": 512,
+    "latent_dim": 30720,
     "beta": 2,
     "first_decoder_conv_depth": 32,
     "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",

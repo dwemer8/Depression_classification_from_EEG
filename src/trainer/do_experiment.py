@@ -24,17 +24,17 @@ from torch.utils.data import DataLoader
 '''
 Project libraries
 '''
-from utils.common import seed_all, printLog, upd, wrap_field
-from utils.data_reading import DataReader
-from utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
-from utils.dataset import InMemoryDataset
-from utils.logger import Logger
-from utils.parser import parse_ml_config, parse_dataset_preprocessing_config
-from utils.early_stopper import EarlyStopper
+from src.utils.common import seed_all, printLog, upd, wrap_field
+from src.data.data_reading import DataReader
+from src.utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
+from src.data.dataset import InMemoryDataset
+from src.utils.logger import Logger
+from src.utils.parser import parse_ml_config, parse_dataset_preprocessing_config
+from src.trainer.early_stopper import EarlyStopper
 
-from models import get_model, load_weights_from_wandb
+from src.models import get_model, load_weights_from_wandb
 
-from training import train_eval
+from src.trainer.train_eval import train_eval
 
 '''
 Experiment function

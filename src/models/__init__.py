@@ -14,7 +14,7 @@ from .modules import \
 from .VAE import VAE, BetaVAE_H, BetaVAE_B
 from .AE import AE, AE_framework
 from .UNet import UNet
-from utils.common import upd
+from src.utils.common import upd
 
 def get_model(model_config):
     model, config = getattr(ModelsZoo, "get_" + model_config["model"])(model_config)

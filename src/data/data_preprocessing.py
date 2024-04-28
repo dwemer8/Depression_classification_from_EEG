@@ -6,7 +6,7 @@ from tqdm.auto import tqdm
 import pickle
 
 from .data_reading import readDataExt_one, readDataExt_mul, fileExtension, fileName
-from utils import DEFAULT_SEED
+from src.utils import DEFAULT_SEED
 
 SAMPLING_FREQUENCY = 250 #Hz
 L_FREQ = 0.1 #Hz
