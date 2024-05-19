@@ -14,23 +14,52 @@ from .modules import \
 from .VAE import VAE, BetaVAE_H, BetaVAE_B
 from .AE import AE, AE_framework
 from .UNet import UNet
-from src.utils.common import upd
+from src.utils.common import upd, printLog
+from src.trainer.helpers import load_sklearn_model
 
 def get_model(model_config):
     model, config = getattr(ModelsZoo, "get_" + model_config["model"])(model_config)
     return model, config
 
-def load_weights_from_wandb(model, artifact, file, verbose=1):
+def load_artifact_from_wandb(
+        artifact,
+        file=None,
+        verbose=1, 
+        type="model", #"model"|"ml_model"
+        logfile=None
+    ):
     if verbose > 0:
-        weights_file = os.path.join(artifact, file)
-        print(f"Loading weights from {weights_file}...")
+        printLog(f"Loading artifact {artifact if file is None else os.path.join(artifact, file)}...", logfile=logfile)
+    
     run = wandb.init()
-    artifact = run.use_artifact(artifact, type='model')
+    artifact = run.use_artifact(artifact, type=type)
     artifact_dir = artifact.download()
-    model.load_state_dict(torch.load(os.path.join(artifact_dir, file)))
     wandb.finish()
+    
+    if verbose > 0:
+        printLog(f"Artifact {artifact_dir if file is None else os.path.join(artifact_dir, file)} was loaded", logfile=logfile)
+
+    if file is None:
+        return artifact_dir
+    else:
+        return os.path.join(artifact_dir, file)
+
+def load_weights_from_wandb(model, artifact, file, verbose=1, logfile=None, device="cpu"):
+    weights_file = load_artifact_from_wandb(artifact, file=file, verbose=verbose, type="model")
+    model.load_state_dict(torch.load(weights_file, map_location=torch.device(device)))
+    
     if verbose > 0: 
-        print("Weights were loaded")
+        printLog(f"Weights were loaded from {weights_file}", logfile=logfile)
+    
+    return model
+
+def load_sklearn_model_from_wandb(artifact, file, verbose=1, logfile=None):
+    model_file = load_artifact_from_wandb(artifact, file=file, verbose=verbose, type="ml_model")
+    model = load_sklearn_model(model_file)
+
+    if verbose > 0:
+        printLog(f"Sklearn model was loaded from {model_file}", logfile=logfile)
+
     return model
 
 # models #######################################################################

@@ -34,6 +34,7 @@ def train_eval(
     ml_eval_function_kwargs=None,
     ml_eval_function_tag=None,
     ml_metric_prefix=None,
+    ml_to_train=None,
     plot_type="classification", #"regression"/"classification"
     
     loss_coefs=None,
@@ -54,8 +55,9 @@ def train_eval(
         if verbose - 1 > 0: printLog("Model is in evaluation mode", logfile=logfile)
 
     try:
-        logger.reset()
+        logger.reset() #drops internal counters related to averaging
         buffer_cnt = 0
+        trained_ml_models = None
 
         start_epoch_time = time.time()
         for step, imgs in enumerate(dataloader):
@@ -181,7 +183,7 @@ def train_eval(
             #classifier/regressor metrics evaluation
             if (check_period is not None and step % check_period == 0) or\
             (check_steps is not None and step in check_steps):
-                eval_ml_model(
+                    trained_ml_models, _ = eval_ml_model(
                     model,
                     test_dataset,
                     targets_test,
@@ -196,7 +198,8 @@ def train_eval(
                     ml_eval_function,
                     ml_eval_function_kwargs,
                     ml_eval_function_tag,
-                    ml_metric_prefix
+                    ml_metric_prefix,
+                    ml_to_train,
                 )
 
             #break
@@ -212,7 +215,7 @@ def train_eval(
         if isinstance(model, BetaVAE_B): logger._append("C", model.get_C())
         logger.log(mode, epoch)
         
-        return model, logger.get()
+        return model, trained_ml_models, logger.get()
 
     except KeyboardInterrupt:
-        return model, {}
+        return model, None, {}

@@ -116,12 +116,13 @@ default_config = {
     "method": "direct restoration",
     "save_path" : OUTPUT_FOLDER + 'model_weights/',
     "log_path" : OUTPUT_FOLDER + "logs/",
-    "hash": "0",
-    "run_hash": "0",
-    "run_name": "test",
-    "seed": 0,
+    "hash": "0", #will be replaced further 
+    "run_hash": "0", #will be replaced further 
+    "run_name": "test", #will be replaced further 
+    "seed": 0, #will be replaced further 
     "n_seeds": 1, #no more than length of FIXED_SEEDS from utils
     "display_mode": "terminal", #ipynb/terminal
+    "save_after_test": True,
     
     "dataset": dataset_config,
     "model": model_config,
@@ -145,180 +146,191 @@ experiments = [default_config]
 # experiments = []
 # for model_config in [
 #     {
-#         "model": "AE_parametrized",
-#         "decoder": {
-#             "in_conv_config": {
-#                 "n_convs": 2,
-#                 "activation": "Sigmoid",
-#                 "in_channels": 24,
-#                 "kernel_size": 3,
-#                 "out_channels": 24
-#             },
-#             "up_blocks_config": [
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 24,
-#                     "kernel_size": 3,
-#                     "out_channels": 12
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 12,
-#                     "kernel_size": 3,
-#                     "out_channels": 6
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 6,
-#                     "kernel_size": 1,
-#                     "out_channels": 3
-#                 }
-#             ]
-#         },
-#         "encoder": {
-#             "out_conv_config": {
-#                 "n_convs": 2,
-#                 "activation": "Sigmoid",
-#                 "in_channels": 24,
-#                 "kernel_size": 3,
-#                 "out_channels": 24
-#             },
-#             "down_blocks_config": [
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 3,
-#                     "kernel_size": 7,
-#                     "out_channels": 6
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 6,
-#                     "kernel_size": 7,
-#                     "out_channels": 12
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 12,
-#                     "kernel_size": 5,
-#                     "out_channels": 24
-#                 }
-#             ]
-#         },
-#         "framework": {
-#             "loss_reduction": "mean",
-#             "first_decoder_conv_depth": 24
-#         },
-#         "loss_reduction": "mean",
-#         "model_description": "duration, finetune, 60 s, AE",
-#         "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v23",
-#         "file": "85_epoch.pth"
+        # "model": "AE_parametrized",
+        # "decoder": {
+        #     "in_conv_config": {
+        #         "n_convs": 2,
+        #         "activation": "Sigmoid",
+        #         "in_channels": 24,
+        #         "kernel_size": 3,
+        #         "out_channels": 24
+        #     },
+        #     "up_blocks_config": [
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 24,
+        #             "kernel_size": 3,
+        #             "out_channels": 12
+        #         },
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 12,
+        #             "kernel_size": 3,
+        #             "out_channels": 6
+        #         },
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 6,
+        #             "kernel_size": 1,
+        #             "out_channels": 3
+        #         }
+        #     ]
+        # },
+        # "encoder": {
+        #     "out_conv_config": {
+        #         "n_convs": 2,
+        #         "activation": "Sigmoid",
+        #         "in_channels": 24,
+        #         "kernel_size": 3,
+        #         "out_channels": 24
+        #     },
+        #     "down_blocks_config": [
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 3,
+        #             "kernel_size": 7,
+        #             "out_channels": 6
+        #         },
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 6,
+        #             "kernel_size": 7,
+        #             "out_channels": 12
+        #         },
+        #         {
+        #             "n_convs": 2,
+        #             "activation": "Sigmoid",
+        #             "in_channels": 12,
+        #             "kernel_size": 5,
+        #             "out_channels": 24
+        #         }
+        #     ]
+        # },
+        # "framework": {
+        #     "loss_reduction": "mean",
+        #     "first_decoder_conv_depth": 24
+        # },
+        # "loss_reduction": "mean",
+        # "model_description": "duration, finetune, 60 s, AE",
+        # "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v23",
+        # "file": "85_epoch.pth"
 #     },
-#     {
-#         "model": "AE_parametrized",
-#         "decoder": {
-#             "in_conv_config": {
-#                 "n_convs": 2,
-#                 "activation": "Sigmoid",
-#                 "in_channels": 24,
-#                 "kernel_size": 3,
-#                 "out_channels": 24
-#             },
-#             "up_blocks_config": [
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 24,
-#                     "kernel_size": 3,
-#                     "out_channels": 12
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 12,
-#                     "kernel_size": 3,
-#                     "out_channels": 6
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 6,
-#                     "kernel_size": 1,
-#                     "out_channels": 3
-#                 }
-#             ]
-#         },
-#         "encoder": {
-#             "out_conv_config": {
-#                 "n_convs": 2,
-#                 "activation": "Sigmoid",
-#                 "in_channels": 24,
-#                 "kernel_size": 3,
-#                 "out_channels": 24
-#             },
-#             "down_blocks_config": [
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 3,
-#                     "kernel_size": 7,
-#                     "out_channels": 6
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 6,
-#                     "kernel_size": 7,
-#                     "out_channels": 12
-#                 },
-#                 {
-#                     "n_convs": 2,
-#                     "activation": "Sigmoid",
-#                     "in_channels": 12,
-#                     "kernel_size": 5,
-#                     "out_channels": 24
-#                 }
-#             ]
-#         },
-#         "framework": {
-#             "loss_reduction": "mean",
-#             "first_decoder_conv_depth": 24
-#         },
-#         "loss_reduction": "mean",
-#         "model_description": "duration, 60 s, AE",
-#         "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v31",
-#         "file": "75_epoch.pth"
-#     },
-#     {
-#         "model": "VAE_deep",
-#         "model_description": "finetune, duration, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
-#         "loss_reduction" : "mean",
-#         "latent_dim": 16*32*60,
-#         "beta": 2,
-#         "first_decoder_conv_depth": 32,
-#         "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v48",
-#         "file": "85_epoch.pth"
-#     },
-#     {
-#         "model": "VAE_deep",
-#         "model_description": "duration, inhouse_dataset, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
-#         "loss_reduction" : "mean",
-#         "latent_dim": 16*32*60,
-#         "beta": 2,
-#         "first_decoder_conv_depth": 32,
-#         "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
-#         "file": "50_epoch.pth"
-#     },
+    # {
+    #     "model": "AE_parametrized",
+    #     "decoder": {
+    #         "in_conv_config": {
+    #             "n_convs": 2,
+    #             "activation": "Sigmoid",
+    #             "in_channels": 24,
+    #             "kernel_size": 3,
+    #             "out_channels": 24
+    #         },
+    #         "up_blocks_config": [
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 24,
+    #                 "kernel_size": 3,
+    #                 "out_channels": 12
+    #             },
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 12,
+    #                 "kernel_size": 3,
+    #                 "out_channels": 6
+    #             },
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 6,
+    #                 "kernel_size": 1,
+    #                 "out_channels": 3
+    #             }
+    #         ]
+    #     },
+    #     "encoder": {
+    #         "out_conv_config": {
+    #             "n_convs": 2,
+    #             "activation": "Sigmoid",
+    #             "in_channels": 24,
+    #             "kernel_size": 3,
+    #             "out_channels": 24
+    #         },
+    #         "down_blocks_config": [
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 3,
+    #                 "kernel_size": 7,
+    #                 "out_channels": 6
+    #             },
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 6,
+    #                 "kernel_size": 7,
+    #                 "out_channels": 12
+    #             },
+    #             {
+    #                 "n_convs": 2,
+    #                 "activation": "Sigmoid",
+    #                 "in_channels": 12,
+    #                 "kernel_size": 5,
+    #                 "out_channels": 24
+    #             }
+    #         ]
+    #     },
+    #     "framework": {
+    #         "loss_reduction": "mean",
+    #         "first_decoder_conv_depth": 24
+    #     },
+    #     "loss_reduction": "mean",
+    #     "model_description": "duration, 60 s, AE",
+    #     "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v31",
+    #     "file": "75_epoch.pth"
+    # },
+    # {
+    #     "model": "VAE_deep",
+    #     "model_description": "finetune, duration, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
+    #     "loss_reduction" : "mean",
+    #     "latent_dim": 16*32*60,
+    #     "beta": 2,
+    #     "first_decoder_conv_depth": 32,
+    #     "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v48",
+    #     "file": "85_epoch.pth"
+    # },
+    # {
+    #     "model": "VAE_deep",
+    #     "model_description": "duration, inhouse_dataset, 60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
+    #     "loss_reduction" : "mean",
+    #     "latent_dim": 16*32*60,
+    #     "beta": 2,
+    #     "first_decoder_conv_depth": 32,
+    #     "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/VAE_deep:v24",
+    #     "file": "50_epoch.pth"
+    # },
 # ]:
 #     hash = hex(random.getrandbits(32))
 #     default_config.update({"hash": hash})
 #     dc = Config(default_config)
-#     for channel_name, channel_index in zip(["None", "fz", "cz", "pz"], [None, 0, 1, 2]):
+#     for channel_name, channel_index in zip([
+#             "None", 
+#             # "fz", 
+#             # "cz", 
+#             # "pz"
+#         ], [
+#             None, 
+#             # 0, 
+#             # 1, 
+#             # 2
+#         ]
+#     ):
 #         cc = dc.upd({
 #             "run_name": f"zero out {channel_name}, " + model_config["model_description"],
 #             "model": model_config,

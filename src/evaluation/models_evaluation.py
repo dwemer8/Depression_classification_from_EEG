@@ -27,10 +27,10 @@ def evaluateClassifier(
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
     evaluate_on_train=False,
-    logfile=None
+    logfile=None,
+    to_train=True,
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):
-        y_pred = clf.predict(X)
         y_proba = clf.predict_proba(X)[:, 1]
         estimates = evaluateMetrics(
             y, 
@@ -48,45 +48,48 @@ def evaluateClassifier(
     if verbose > 0: printLog("Data split", logfile=logfile) 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True, stratify=y)
 
-    if verbose > 0: printLog("GridSearchCV", logfile=logfile)
-    clf = GridSearchCV(
-        model,
-        param_grid=param_grid,
-        scoring=make_scorer(cv_scorer),
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
-        n_jobs=-1,
-        verbose=max(verbose-1, 0)
-    ) 
+    if to_train:
+        if verbose > 0: printLog("GridSearchCV", logfile=logfile)
+        gscv_clf = GridSearchCV(
+            model,
+            param_grid=param_grid,
+            scoring=make_scorer(cv_scorer),
+            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
+            n_jobs=-1,
+            verbose=max(verbose-1, 0)
+        ) 
 
-    gscv_time_start = time.time()
-    clf.fit(X_train, y_train)
-    gscv_time_end = time.time()
-    if verbose > 0: 
-        printLog("Best classifier:", clf.best_estimator_, logfile=logfile)
-        printLog(f"GSCV: {gscv_time_end - gscv_time_start} s", logfile=logfile)
+        gscv_time_start = time.time()
+        gscv_clf.fit(X_train, y_train)
+        gscv_time_end = time.time()
+        clf = gscv_clf.best_estimator_
+        if verbose > 0: 
+            printLog("Best classifier:", clf, logfile=logfile)
+            printLog(f"GSCV: {gscv_time_end - gscv_time_start} s", logfile=logfile)
+        if verbose - 1 > 0:
+            printLog("Parameters:", gscv_clf.best_params_, logfile=logfile)
+            printLog("Score:", gscv_clf.best_score_, logfile=logfile)
 
-    if verbose - 1 > 0:
-        printLog("Best classifier:", logfile=logfile)
-        printLog("Parameters:", clf.best_params_, logfile=logfile)
-        printLog("Score:", clf.best_score_, logfile=logfile)
+    else:
+        clf = model
 
     estimates_train={}
     if evaluate_on_train:
         if verbose > 0: printLog("Evaluation on the train data...", logfile=logfile)
         estimates_train_time_start = time.time()
-        estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
+        estimates_train = evaluate(clf, X_train, y_train)
         estimates_train_time_end = time.time()
         if verbose > 0: printLog(f"Evaluation on the train data: {estimates_train_time_end - estimates_train_time_start} s", logfile=logfile)
     
     if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
     estimates_test_time_start = time.time()
-    estimates_test = evaluate(clf.best_estimator_, X_test, y_test)
+    estimates_test = evaluate(clf, X_test, y_test)
     estimates_test_time_end = time.time()
     if verbose > 0: printLog(f"Evaluation on the test data: {estimates_test_time_end - estimates_test_time_start} s", logfile=logfile)
 
-    return {
+    return clf, {
         "train": estimates_train,
-        "test": estimates_test
+        "test": estimates_test,
     }
 
 def evaluateClassifier_inner_outer_cv(
@@ -100,33 +103,39 @@ def evaluateClassifier_inner_outer_cv(
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_splits_inner=10,
     n_splits_outer=10,
-    logfile=None
+    logfile=None,
+    to_train=True
 ):
     model = deepcopy(model)
     
     inner_cv = StratifiedKFold(n_splits=n_splits_inner, shuffle=True, random_state=seed)
     outer_cv = StratifiedKFold(n_splits=n_splits_outer, shuffle=True, random_state=seed+1)
 
-    if verbose > 0: printLog("GridSearchCV", logfile=logfile)
-    clf = GridSearchCV(
-        estimator=model,  
-        param_grid=param_grid,
-        scoring=make_scorer(cv_scorer),
-        cv=inner_cv,
-        n_jobs=-1,
-        verbose=max(verbose-1, 0)
-    )
-    clf.fit(X, y)
-    if verbose > 0: printLog("Best estimator:", clf.best_estimator_, logfile=logfile)
+    if to_train:
+        if verbose > 0: printLog("GridSearchCV", logfile=logfile)
+        gscv_clf = GridSearchCV(
+            estimator=model,  
+            param_grid=param_grid,
+            scoring=make_scorer(cv_scorer),
+            cv=inner_cv,
+            n_jobs=-1,
+            verbose=max(verbose-1, 0)
+        )
+        gscv_clf.fit(X, y)
+        if verbose > 0: printLog("Best estimator:", gscv_clf.best_estimator_, logfile=logfile)
+        clf = gscv_clf.best_estimator_
+
+    else:
+        clf = model
 
     if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
-    estimates_train = evaluateMetrics_cv(clf.best_estimator_, X, y, inner_cv, metrics, verbose=(verbose-1))
+    estimates_train = evaluateMetrics_cv(clf, X, y, inner_cv, metrics, verbose=(verbose-1))
     if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
-    estimates_test = evaluateMetrics_cv(clf.best_estimator_, X, y, outer_cv, metrics, verbose=(verbose-1))
+    estimates_test = evaluateMetrics_cv(clf, X, y, outer_cv, metrics, verbose=(verbose-1))
     
-    return {
+    return clf, {
         "train": estimates_train,
-        "test": estimates_test
+        "test": estimates_test,
     }
 
 def evaluateRegressor(
@@ -137,7 +146,8 @@ def evaluateRegressor(
     verbose=1,
     test_size=0.33,
     seed=DEFAULT_SEED,
-    logfile=None
+    logfile=None,
+    to_train=True
 ):
     def evaluate(reg, X, y):
         y_pred = reg.predict(X)
@@ -148,30 +158,35 @@ def evaluateRegressor(
     if verbose > 0: printLog("Data split", logfile=logfile) 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True)
 
-    if verbose > 0: printLog("GridSearchCV", logfile=logfile)
-    reg = GridSearchCV(
-        model,
-        param_grid=param_grid,
-        scoring=make_scorer(mse, greater_is_better=False),
-        cv=KFold(n_splits=5, shuffle=True, random_state=seed),
-        n_jobs=-1,
-        verbose=(verbose-1)
-    ) 
+    if to_train:
+        if verbose > 0: printLog("GridSearchCV", logfile=logfile)
+        gscv_reg = GridSearchCV(
+            model,
+            param_grid=param_grid,
+            scoring=make_scorer(mse, greater_is_better=False),
+            cv=KFold(n_splits=5, shuffle=True, random_state=seed),
+            n_jobs=-1,
+            verbose=(verbose-1)
+        ) 
 
-    reg.fit(X_train, y_train)
-    if verbose > 0: printLog("Best regressor:", reg.best_estimator_, logfile=logfile) 
+        gscv_reg.fit(X_train, y_train)
+        if verbose > 0: 
+            printLog("Best regressor:", gscv_reg.best_estimator_, logfile=logfile) 
+        if verbose - 1 > 0:
+            printLog("Parameters:", gscv_reg.best_params_, logfile=logfile)
+            printLog("Score:", gscv_reg.best_score_, logfile=logfile)
+        reg = gscv_reg.best_estimator_
+    
+    else:
+        reg = model
 
     if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
-    mse_train = evaluate(reg.best_estimator_, X_train, y_train)
-    
-    if verbose - 1 > 0:
-        printLog("Parameters:", reg.best_params_, logfile=logfile)
-        printLog("Score:", reg.best_score_, logfile=logfile)
+    mse_train = evaluate(reg, X_train, y_train)
     
     if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
-    mse_test = evaluate(reg.best_estimator_, X_test, y_test)
+    mse_test = evaluate(reg, X_test, y_test)
 
-    return {
+    return reg, {
         "test" : {"mse" : mse_test},
         "val" : {"mse" : reg.best_score_},
         "train" : {"mse" : mse_train},
@@ -188,7 +203,8 @@ def get_bootstrap_classifier_values(
     cv_scorer=balanced_accuracy_score,
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
-    logfile=None
+    logfile=None,
+    to_train=True
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):        
         y_proba = clf.predict_proba(X)[:, 1]
@@ -205,31 +221,35 @@ def get_bootstrap_classifier_values(
     if verbose > 0: printLog("Data split", logfile=logfile) 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed, shuffle=True)
 
-    if verbose > 0: printLog("GridSearchCV", logfile=logfile)
-    clf = GridSearchCV(
-        model,
-        param_grid=param_grid,
-        scoring=make_scorer(cv_scorer),
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
-        n_jobs=-1,
-        verbose=max(verbose-1, 0)
-    ) 
+    if to_train:
+        if verbose > 0: printLog("GridSearchCV", logfile=logfile)
+        gscv_clf = GridSearchCV(
+            model,
+            param_grid=param_grid,
+            scoring=make_scorer(cv_scorer),
+            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
+            n_jobs=-1,
+            verbose=max(verbose-1, 0)
+        ) 
 
-    clf.fit(X_train, y_train)
-    if verbose > 0: printLog("Best classifier:", clf.best_estimator_, logfile=logfile)
+        gscv_clf.fit(X_train, y_train)
+        if verbose > 0: 
+            printLog("Best classifier:", gscv_clf.best_estimator_, logfile=logfile)
+        if verbose - 1 > 0:
+            printLog("Parameters:", gscv_clf.best_params_, logfile=logfile)
+            printLog("Score:", gscv_clf.best_score_, logfile=logfile)
+        clf = gscv_clf.best_estimator_
+
+    else:
+        clf = model
 
     if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
     estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
-
-    if verbose - 1 > 0:
-        printLog("Best classifier:", logfile=logfile)
-        printLog("Parameters:", clf.best_params_, logfile=logfile)
-        printLog("Score:", clf.best_score_, logfile=logfile)
     
     if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
     estimates_test = evaluate(clf.best_estimator_, X_test, y_test)
     
-    return {
+    return clf, {
         "train": estimates_train,
-        "test": estimates_test
+        "test": estimates_test,
     }

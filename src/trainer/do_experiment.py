@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader
 '''
 Project libraries
 '''
-from src.utils.common import seed_all, printLog, upd, wrap_field
+from src.utils.common import seed_all, printLog, upd, wrap_field, replace_unsupported_path_symbols
 from src.data.data_reading import DataReader
 from src.utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
 from src.data.dataset import InMemoryDataset
@@ -32,7 +32,7 @@ from src.utils.logger import Logger
 from src.utils.parser import parse_ml_config, parse_dataset_preprocessing_config
 from src.trainer.early_stopper import EarlyStopper
 
-from src.models import get_model, load_weights_from_wandb
+from src.models import get_model, load_weights_from_wandb, load_sklearn_model_from_wandb
 
 from src.trainer.train_eval import train_eval
 
@@ -42,7 +42,7 @@ Experiment function
 
 def do_experiment(config, device="cpu", verbose=0):
     try:
-        if config["log_path"] is not None: logfile = open(os.path.join(config["log_path"], config["model"]["model_description"].replace(" ", "_").replace("/", ".")), "a")
+        if config["log_path"] is not None: logfile = open(os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"])), "a")
         else: logfile = None
 
         #############
@@ -162,7 +162,7 @@ def do_experiment(config, device="cpu", verbose=0):
     
         if verbose - 2 > 0: printDataloaderMeta(val_dataloader, test_dataloader, train_dataloader=None if train_config is None else train_dataloader, pretrain_dataloader=None if pretrain_config is None else pretrain_dataloader, logfile=logfile)
     
-        #Model
+        #Model and environment
         config["model"].update({
             "input_dim" : test_dataset[0].shape,
         })
@@ -171,28 +171,21 @@ def do_experiment(config, device="cpu", verbose=0):
         if verbose - 1 > 0: printLog('model ' + config["model"]['model_description'] + ' is created', logfile=logfile)
         if verbose - 2 > 0: printLog(model, logfile=logfile)
     
-        #Download weights
-        if "artifact" in config["model"] and "file" in config["model"]:
-            model = load_weights_from_wandb(model, config["model"]["artifact"], config["model"]["file"], verbose=verbose)
-    
-        # TESTS
-        model.eval()
-        test_data_point = test_dataset[0][None].to(device)
-        inference_result = model(test_data_point)
-        reconstruct_result = model.reconstruct(test_data_point)
-        encode_result = model.encode(test_data_point)
-        if verbose - 1 > 0: 
-            printLog(f"Test data point shape: {test_data_point.shape}", logfile=logfile)
-            printLog(f"Test inference result length: {len(inference_result)}", logfile=logfile)
-            printLog(f"Test reconstruct shape: {reconstruct_result.shape}", logfile=logfile)
-            printLog(f"Test encode shape: {encode_result.shape}", logfile=logfile)
-    
         #optimizer and scheduler
         optimizer = getattr(torch.optim, config["optimizer"]["optimizer"])(model.parameters(), **config["optimizer"]["kwargs"])
         if verbose - 1 > 0: printLog(f'Optimizer {type(optimizer).__name__} is instantiated', logfile=logfile)
     
         scheduler = getattr(torch.optim.lr_scheduler, config["scheduler"]["scheduler"])(optimizer, **config["scheduler"]["kwargs"])
         if verbose - 1 > 0: printLog(f'Scheduler {type(scheduler).__name__} is instantiated', logfile=logfile)
+
+        #NB: Should be placed before Logger since it uses wandb.init() and wandb.finish()
+        #Download weights
+        if "artifact" in config["model"] and "file" in config["model"]:
+            model = load_weights_from_wandb(model, config["model"]["artifact"], config["model"]["file"], verbose=verbose, device=device)
+        
+        ml_model = None #will be used further to update config
+        if "ml_artifact" in config["model"] and "ml_file" in config["model"]:
+            ml_model = load_sklearn_model_from_wandb(config["model"]["ml_artifact"], config["model"]["ml_file"], verbose=verbose)
     
         logger = Logger(
             log_type=config["logger"]["log_type"], 
@@ -205,16 +198,31 @@ def do_experiment(config, device="cpu", verbose=0):
             model_description=config["model"]["model_description"],
         #         log_dir = OUTPUT_FOLDER + "logs/"
         )
+    
+        # TESTS
+        model.eval()
+        test_data_point = test_dataset[0][None].to(device)
+        inference_result = model(test_data_point)
+        reconstruct_result = model.reconstruct(test_data_point)
+        encode_result = model.encode(test_data_point)
+        if verbose - 1 > 0: 
+            printLog(f"Test data point shape: {test_data_point.shape}", logfile=logfile)
+            printLog(f"Test inference result length: {len(inference_result)}", logfile=logfile)
+            printLog(f"Test reconstruct shape: {reconstruct_result.shape}", logfile=logfile)
+            printLog(f"Test encode shape: {encode_result.shape}", logfile=logfile)
 
-        #Cannot be placed before get_model() since it updates config 
+        #NB:Cannot be placed before get_model() since it updates config
         #print whole config
         printLog('#################### ' + config["model"]["model_description"] + ' ####################', logfile=logfile)
         printLog(json.dumps(config, indent=4), logfile=logfile)
         
+        #NB:should be just before training because replace names by objects. Cannot be placed before Logger since it logs config
         #parse ml config
-        #NB:should be just before training because replace names by objects
         config["ml"] = parse_ml_config(config["ml"])
         config["ml_validation"] = parse_ml_config(config["ml_validation"])
+        if ml_model is not None:
+            config["ml"]["ml_model"] = deepcopy(ml_model)
+            config["ml_validation"]["ml_model"] = deepcopy(ml_model)
     
         #seed
         seed_all(config["seed"])
@@ -223,9 +231,13 @@ def do_experiment(config, device="cpu", verbose=0):
         best_loss = np.inf
         best_clf_accuracy = 0
         best_model = None
+        best_ml_model = None
         best_epoch = None
         final_epoch = None
         final_model = None
+        final_ml_model = None
+        trained_ml_models = None
+        zero_ml_tag = config["ml_validation"]["ml_eval_function_tag"][0]
 
         for curr_dataloader, dataset_config in zip(
             [None if pretrain_config is None else pretrain_dataloader, None if train_config is None else train_dataloader],
@@ -242,7 +254,7 @@ def do_experiment(config, device="cpu", verbose=0):
                 # train
                 #######
                 if verbose > 0: printLog("##### Training... #####", logfile=logfile)
-                model, results = train_eval(
+                model, trained_ml_models, results = train_eval( #None in trained_ml_model since no test_dataset and targets_test
                     curr_dataloader,
                     model,
                     device=device,
@@ -271,7 +283,7 @@ def do_experiment(config, device="cpu", verbose=0):
                 # validation
                 ############
                 if verbose > 0: printLog("##### Validation... #####", logfile=logfile)
-                model, results = train_eval(
+                model, trained_ml_models, results = train_eval(
                     val_dataloader,
                     model,
                     device=device,
@@ -298,44 +310,63 @@ def do_experiment(config, device="cpu", verbose=0):
                     print(json.dumps(results, indent=4), file=logfile)
         
                 scheduler.step(results['loss'])
-        
-                zero_ml_tag = config["ml_validation"]["ml_eval_function_tag"][0]
+                
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
                 accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.accuracy'
                 if results.get(accuracy_tag, 0) > best_clf_accuracy:
                     best_clf_accuracy = results[accuracy_tag]
                     best_model = deepcopy(model)
+                    best_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
                     best_epoch = epoch
                     if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
                 
                 if results['loss'] < best_loss:
                     best_loss = results['loss']
                     final_model = deepcopy(model)
+                    final_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
                     final_epoch = epoch
                     if verbose > 0: printLog(f"New best loss = {best_loss} on epoch {epoch}", logfile=logfile)
                 
                 if early_stopper.early_stop(results['loss']): break
 
-        if train_config is not None:
-            logger.save_model(train_config["steps"]['end_epoch'], model)
+        if train_config is not None or pretrain_config is not None:
+            logger.save_model(train_config["steps"]['end_epoch'], model=model, ml_model=trained_ml_models[zero_ml_tag])
+
             if final_epoch is not None:
-                logger.save_model(final_epoch, final_model)
+                logger.save_model(final_epoch, model=final_model, ml_model=final_ml_model)
                 logger.update_summary("validation.final_epoch", final_epoch)
+
             if best_epoch is not None:
-                logger.save_model(best_epoch, best_model)
+                logger.save_model(best_epoch, model=best_model, ml_model=best_ml_model)
                 logger.update_summary("validation.best_epoch", best_epoch)
         else:
+            print("INFO: Since there is no pretrain or train, final_model is loaded from current model, final_ml_model is loaded from current ml_model and test_model with test_ml_model are Nones.")
             final_model = model
+            final_ml_model = ml_model
             final_epoch = 0
     
         ######
         # test
         ######
         results_all = {}
-        for tested_model, mode in zip([final_model, best_model], ["final", "test"]):
+        not_trained_ml_model = deepcopy(config["ml"]["ml_model"])
+
+        for tested_model, tested_ml_model, mode, epoch in zip(
+            [final_model, best_model], [final_ml_model, best_ml_model], ["final", "test"], [final_epoch, best_epoch]
+        ):
             if verbose > 0: printLog(f"##### Testing in {mode} mode... #####", logfile=logfile)
             if tested_model is not None:
-                _, results = train_eval(
+                if tested_ml_model is not None:
+                    printLog(f"INFO:{mode}_ml_model present.", logfile=logfile)
+                    config["ml"]["ml_model"] = tested_ml_model
+                    config["ml"]["ml_to_train"] = False
+
+                else:
+                    printLog(f"INFO:{mode}_ml_model is None, ml model is loaded from config and will be trained", logfile=logfile)
+                    config["ml"]["ml_model"] = not_trained_ml_model #is needed in case if we changed model on previous step, but on this we have None
+                    config["ml"]["ml_to_train"] = True
+
+                tested_model, trained_ml_models, results = train_eval(
                     test_dataloader,
                     tested_model,
                     device=device,
@@ -354,12 +385,17 @@ def do_experiment(config, device="cpu", verbose=0):
                     **config["ml"],
                 )
                 results_all[mode] = results
+                if results == {}: break
                 if verbose > 0: 
                     if config.get("display_mode", "terminal") == "ipynb": display(dict_to_df(results))
                     else: print(dict_to_df(results).T)
                     for k in results: 
                         if type(results[k]) == np.ndarray: results[k] = float(results[k].tolist())
                     print(json.dumps(results, indent=4), file=logfile)
+
+                if config.get("save_after_test", False):
+                    printLog(f"INFO: Saving models after test in {mode} mode.")
+                    logger.save_model(epoch, model=tested_model, model_postfix=f"_{mode}", ml_model=trained_ml_models[zero_ml_tag], ml_model_postfix=f"_{mode}")
             else:
                 printLog(f"WARNING:{mode} model is None", logfile=logfile)
         

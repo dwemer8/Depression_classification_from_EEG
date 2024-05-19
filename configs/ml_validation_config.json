@@ -6,6 +6,7 @@
         "clf": "svm.SVC"
         #"clf": "linear_model.LogisticRegression"
     },
+    "ml_to_train": true,
     "ml_param_grid" : {
         "clf__C": [1],
         "clf__class_weight": ["balanced"],

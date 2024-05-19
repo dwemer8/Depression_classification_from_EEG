@@ -3,6 +3,9 @@ import torch
 import wandb
 from torch.utils.tensorboard import SummaryWriter
 
+from src.trainer.helpers import save_sklearn_model
+from src.utils.common import objectName, replace_unsupported_path_symbols
+
 class Logger:
     def __init__(
         self,
@@ -23,16 +26,20 @@ class Logger:
         project_name : str = None,
         config : dict = {},
         log_freq : int = 10,
-        model_description : str = None,
+        model_description : str = None, #it will be used to create artifact directory
         watch_model : bool = True
     ):
         
         self.log_type = log_type
         self.run_name = run_name
+        self.hash = config["hash"]
+        self.run_hash = config["run_hash"]
         self.model = model
         self.model_name = model_name
+        self.model_description = replace_unsupported_path_symbols(model_description)
+        self.ml_model_name = objectName(config["ml"]["ml_model"][config["ml"]["ml_metric_prefix"]])
         self.save_path = save_path
-        self.is_save_model = self.save_path is not None and self.model_name is not None
+        self.is_save_model = self.save_path is not None and self.model_description is not None
         self.reset()
         
         if self.log_type == "tensorboard":
@@ -54,7 +61,8 @@ class Logger:
             self.run = wandb.init(name=self.run_name, project=project_name, config=config)  # Initialize wandb
             
             if watch_model: 
-                self.artifact = wandb.Artifact(config['model']["model"], type='model', description=model_description, metadata=config)
+                self.artifact = wandb.Artifact(self.model_description, type='model', description=model_description, metadata=config)
+                self.artifact_ml = wandb.Artifact(self.model_description + "_" + self.ml_model_name, type='ml_model', description=model_description, metadata=config)
                 wandb.watch(model, log_freq=log_freq)
             
         elif self.log_type == "none":
@@ -127,26 +135,36 @@ class Logger:
             
     def _log_model(self, model_file):
         self.artifact.add_file(model_file)
+
+    def _log_ml_model(self, model_file):
+        self.artifact_ml.add_file(model_file)
             
-    def save_model(self, epoch, model=None):
+    def save_model(self, epoch, model=None, model_postfix="", ml_model=None, ml_model_postfix=""):
         if model is None: model = self.model
         
         if self.log_type == "none":
             pass
         
         elif self.is_save_model:
-            save_dir = os.path.join(self.save_path, self.model_name)
+            save_dir = os.path.join(self.save_path, self.model_description, self.hash, self.run_hash)
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             
-            model_file = os.path.join(save_dir, str(epoch) + "_epoch.pth")
+            model_file = os.path.join(save_dir, str(epoch) + f"_epoch{model_postfix}.pth")
             torch.save(model.state_dict(), model_file)
 
             if self.log_type == "wandb":
                 self._log_model(model_file)
+
+            if ml_model is not None:
+                ml_model_file = os.path.join(save_dir, str(epoch) + "_epoch_" + self.ml_model_name + f"{ml_model_postfix}.pth") #TODO: distinct directory
+                save_sklearn_model(ml_model, ml_model_file)
+
+                if self.log_type == "wandb":
+                    self._log_ml_model(ml_model_file)
         
-        elif self.save_path is not None and self.model_name is None:
-            raise ValueError("Model_name hasn't been set whereas save_path has")
+        elif self.save_path is not None and self.model_description is None:
+            raise ValueError("Model_description hasn't been set whereas save_path has")
         
     def finish(self):
         if self.log_type == "tensorboard": 
@@ -155,6 +173,7 @@ class Logger:
         if self.log_type == "wandb":
             if self.is_save_model:
                 self.run.log_artifact(self.artifact)
+                self.run.log_artifact(self.artifact_ml)
             wandb.finish()
 
     def update_summary(self, key, value):

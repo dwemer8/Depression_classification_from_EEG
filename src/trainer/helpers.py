@@ -108,11 +108,12 @@ def eval_ml_model(
     ml_eval_function,
     ml_eval_function_kwargs,
     ml_eval_function_tag,
-    ml_metric_prefix
+    ml_metric_prefix,
+    ml_to_train
 ):
     start_evaluation_time = time.time()
 
-    if ml_model is None or ml_param_grid is None or ml_eval_function is None: raise ValueError("Some ml parameter is not defined")
+    if ml_model is None or ml_param_grid is None or ml_eval_function is None or ml_to_train is None: raise ValueError("Some ml parameter is not defined")
 
     if verbose - 1 > 0: printLog("Classifier/regressor metrics evaluation...", logfile=logfile)
     X, y = get_embeddings(
@@ -126,9 +127,20 @@ def eval_ml_model(
     )
     if verbose - 2 > 0: printLog("Embeddings shape:", X.shape, logfile=logfile)
     results = {}
+    trained_models = {}
     for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
-        results[tag] = (func(X, y, ml_model, ml_param_grid, logfile=logfile, **kwargs))
+        trained_models[tag], results[tag] = func(
+            X, 
+            y, 
+            ml_model, 
+            ml_param_grid, 
+            logfile=logfile, 
+            to_train=ml_to_train, 
+            **kwargs
+        )
     logger.update_other({ml_metric_prefix: results})
 
     end_evaluation_time = time.time()
     if verbose - 2 > 0: printLog(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s", logfile=logfile)
+
+    return trained_models, results

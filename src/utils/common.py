@@ -24,7 +24,12 @@ def get_object_name(method):
     return method.__name__.replace("_score", "")
 
 def objectName(object):
-    return str(type(object)).split(".")[-1].replace("\'>", "")
+    if isinstance(object, str):
+        return object
+    if hasattr(object, '__name__'):
+        return object.__name__
+    else:
+        return str(type(object)).split(".")[-1].replace("\'>", "")
 
 def seed_all(SEED):
     torch.manual_seed(SEED)
@@ -41,9 +46,6 @@ def printLog(*args, logfile=None, **kwargs):
         print(*args, file=logfile, **kwargs)
 
 def upd(config, d):
-    '''
-    It updates only existing keys!!!
-    '''
     config = deepcopy(config)
     for k, v in config.items():
         if k in d:
@@ -51,6 +53,11 @@ def upd(config, d):
                 config[k] = upd(v, d[k])
             else:
                 config[k] = d[k]
+
+    for k in d.keys():
+        if k not in config.keys():
+            config[k] = d[k]
+        
     return config
 
 class Config():
@@ -58,9 +65,6 @@ class Config():
         self.config = config
 
     def upd(self, d):
-        '''
-        It updates only existing keys!!!
-        '''
         config = deepcopy(self.config)
         for k, v in config.items():
             if k in d:
@@ -68,6 +72,11 @@ class Config():
                     config[k] = upd(v, d[k])
                 else:
                     config[k] = d[k]
+
+        for k in d.keys():
+            if k not in config.keys():
+                config[k] = d[k]
+
         return config
 
 def replace(s, replacements):
@@ -101,3 +110,6 @@ def check_instance(object, types):
         if isinstance(object, class_type):
             return True
     return False
+
+def replace_unsupported_path_symbols(x):
+    return x.replace(" ", "_").replace("/", ".").replace(",", ".")
