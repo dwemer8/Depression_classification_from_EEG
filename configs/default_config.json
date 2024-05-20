@@ -7,7 +7,7 @@
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
-    "n_seeds": 1,
+    "n_seeds": 3,
     "display_mode": "terminal",
     "save_after_test": true,
     "dataset": {
