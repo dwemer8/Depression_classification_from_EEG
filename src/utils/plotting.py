@@ -197,12 +197,12 @@ def plot_se(x, y, y_se=None, label=None, ax=plt, alpha=0.3, marker="."):
     if y_se is not None:
         ax.fill_between(x, y - y_se, y + y_se, alpha=alpha)
 
-def plot_reconstructions(sample, sample_reconstructed, ax=plt, max_t=None):
+def plot_reconstructions(sample, sample_reconstructed, ax=plt, max_t=None, start_t=None):
     if ax is plt: ax = [plt]
     assert len(sample.squeeze()) == len(sample_reconstructed.squeeze()), "Number of channels in image and reconstruction must be equal"
     assert len(sample.squeeze()) <= len(ax), "Number of channels in image and number of axes must be equal"
     for i, axis in enumerate(ax):
-        axis.plot(sample.squeeze()[i][:max_t], label="ground truth", color="b", marker="o", alpha=0.5)
-        axis.plot(sample_reconstructed.squeeze()[i][:max_t].detach().cpu(), label="reconstruction", color="r", alpha=0.5)
+        axis.plot(sample.squeeze()[i][start_t:start_t+max_t], label="ground truth", color="b", marker="o", alpha=0.5)
+        axis.plot(sample_reconstructed.squeeze()[i][start_t:start_t+max_t].detach().cpu(), label="reconstruction", color="r", alpha=0.5)
         axis.legend()
         axis.set_title(f"Reconstruction of channel #{i}")

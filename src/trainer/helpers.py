@@ -104,7 +104,7 @@ def vizualize(
     n_channels = imgs.shape[-2]
     fig, ax = plt.subplots(nrows=n_channels, ncols=1, figsize=(6, 3*n_channels))
     if verbose - 1 > 0: printLog("Plotting reconstruction...", logfile=logfile)
-    plot_reconstructions(imgs[0], imgs_reconstructed[0], ax=ax, max_t=128)
+    plot_reconstructions(imgs[0], imgs_reconstructed[0], ax=ax, max_t=128, start_t=imgs.shape[-1]//2-64)
     plt.tight_layout()
     reconstructions_plot = os.path.join(artifacts_dir, f'reconstructions.png')
     fig.savefig(reconstructions_plot, dpi=fig.dpi)
