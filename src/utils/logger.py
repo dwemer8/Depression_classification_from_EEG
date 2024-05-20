@@ -83,15 +83,19 @@ class Logger:
         self.n_steps = 0
         self.other_values = {}
         self.n_steps_other = 0
+        self.values_without_averaging = {}
         
     def get(self):
-        return {**self.per_step_values, **self.other_values}
+        return {**self.per_step_values, **self.other_values, **self.values_without_averaging}
         
     def _append(self, k, v):
         self.addOrCreate(self.per_step_values, k, v)
     
     def _append_other(self, k, v):
         self.addOrCreate(self.other_values, k, v)
+        
+    def _append_without_averaging(self, k, v):
+        self.addOrCreate(self.values_without_averaging, k, v)
 
     def flatten(self, d, current_path=""):
         def join_paths(root, leaf):
@@ -121,6 +125,11 @@ class Logger:
         for key in flatten_d:
             self._append_other(key, flatten_d[key])
         self.n_steps_other += 1
+
+    def update_without_averaging(self, d):
+        flatten_d = self.flatten(d)
+        for key in flatten_d:
+            self._append_without_averaging(key, flatten_d[key]) 
         
     def average(self):
         for key in self.per_step_values: self.per_step_values[key] /= self.n_steps

@@ -1,7 +1,7 @@
 import time
 import torch
 import numpy as np
-
+import wandb
 
 from src.models.VAE import VAE, BetaVAE_H, BetaVAE_B
 from src.models.AE import AE_framework
@@ -46,6 +46,7 @@ def train_eval(
     avg_embeddings_over_time=False,
     verbose=0,
     logfile=None,
+    logdir=None,
 ):  
     if mode == "train":
         model.train()
@@ -177,7 +178,9 @@ def train_eval(
                     buffer_max, 
                     buffer_cnt,
                     plot_type,
-                    verbose
+                    verbose,
+                    logdir,
+                    logger
                 )
 
             #classifier/regressor metrics evaluation
@@ -215,7 +218,8 @@ def train_eval(
         if isinstance(model, BetaVAE_B): logger._append("C", model.get_C())
         logger.log(mode, epoch)
         
-        return model, trained_ml_models, logger.get()
+        results = {k: v for k, v in logger.get().items() if not isinstance(v, wandb.Image)}
+        return model, trained_ml_models, results
 
     except KeyboardInterrupt:
         return model, None, {}

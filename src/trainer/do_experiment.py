@@ -291,7 +291,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     test_dataset=val_dataset,
                     targets_test=targets_val,
                     check_period=config["train"]["validation"]["check_period"] if epoch % config['train']['validation']['check_period_per_epoch'] == 0 else None,
-                    plot_period=config["train"]["validation"]["plot_period"] if (epoch % config['train']['validation']['plot_period_per_epoch'] == 0 and config.get("display_mode", "terminal") == "ipynb") else None,
+                    plot_period=config["train"]["validation"]["plot_period"] if epoch % config['train']['validation']['plot_period_per_epoch'] == 0 else None,
                     epoch=epoch,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
@@ -299,6 +299,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
                     logfile=logfile,
+                    logdir=os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"]) + "_artifacts"),
                     **config["ml_validation"],
                 )
                 if results == {}: break
@@ -357,12 +358,12 @@ def do_experiment(config, device="cpu", verbose=0):
             if verbose > 0: printLog(f"##### Testing in {mode} mode... #####", logfile=logfile)
             if tested_model is not None:
                 if tested_ml_model is not None:
-                    printLog(f"INFO:{mode}_ml_model present.", logfile=logfile)
+                    printLog(f"INFO:{mode}_ml_model present: {tested_ml_model}", logfile=logfile)
                     config["ml"]["ml_model"] = tested_ml_model
                     config["ml"]["ml_to_train"] = False
 
                 else:
-                    printLog(f"INFO:{mode}_ml_model is None, ml model is loaded from config and will be trained", logfile=logfile)
+                    printLog(f"INFO:{mode}_ml_model is None, ml model {not_trained_ml_model} is loaded from config and will be trained", logfile=logfile)
                     config["ml"]["ml_model"] = not_trained_ml_model #is needed in case if we changed model on previous step, but on this we have None
                     config["ml"]["ml_to_train"] = True
 
@@ -374,7 +375,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     test_dataset=test_dataset,
                     targets_test=targets_test,
                     check_period=1e10,
-                    plot_period=1e10 if config.get("display_mode", "terminal") == "ipynb" else None,
+                    plot_period=1e10,
                     epoch=train_config["steps"]['end_epoch'] if train_config is not None else 0,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
@@ -382,6 +383,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     step_max=train_config["steps"]["step_max"] if train_config is not None else None, 
                     verbose=verbose,
                     logfile=logfile,
+                    logdir=os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"]) + "_artifacts"),
                     **config["ml"],
                 )
                 results_all[mode] = results

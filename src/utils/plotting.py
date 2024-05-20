@@ -141,7 +141,7 @@ def dataset_hists(train_set, val_set, test_set, chunk_bins=20, target_bins=3, ch
 
 # embeddings visualization
 
-def plotData(X, y, method="pca", ax=plt, plot_type="regression", seed=DEFAULT_SEED, **kwargs):
+def plot_data(X, y, method="pca", ax=plt, plot_type="regression", seed=DEFAULT_SEED, **kwargs):
     n_components = 2
     if method == "pca":
         reducer = PCA(n_components=n_components, random_state=seed, whiten=True, svd_solver="full", **kwargs)
@@ -196,3 +196,13 @@ def plot_se(x, y, y_se=None, label=None, ax=plt, alpha=0.3, marker="."):
     ax.plot(x, y, label=label, marker=marker)
     if y_se is not None:
         ax.fill_between(x, y - y_se, y + y_se, alpha=alpha)
+
+def plot_reconstructions(sample, sample_reconstructed, ax=plt, max_t=None):
+    if ax is plt: ax = [plt]
+    assert len(sample.squeeze()) == len(sample_reconstructed.squeeze()), "Number of channels in image and reconstruction must be equal"
+    assert len(sample.squeeze()) <= len(ax), "Number of channels in image and number of axes must be equal"
+    for i, axis in enumerate(ax):
+        axis.plot(sample.squeeze()[i][:max_t], label="ground truth", color="b", marker="o", alpha=0.5)
+        axis.plot(sample_reconstructed.squeeze()[i][:max_t].detach().cpu(), label="reconstruction", color="r", alpha=0.5)
+        axis.legend()
+        axis.set_title(f"Reconstruction of channel #{i}")

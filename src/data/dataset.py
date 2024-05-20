@@ -24,14 +24,14 @@ class InMemoryDataset(Dataset):
     def __getitem__(self, index: int):
         sample = np.array(self.samples[index])
 
+        if self.transforms is not None: 
+            for transform in self.transforms:
+                sample = transform(sample)
+
         #scaling
         sample = torch.from_numpy(
             (sample - sample.min())/(sample.max() - sample.min())
         ).to(torch.float32)
-
-        if self.transforms is not None: 
-            for transform in self.transforms:
-                sample = transform(sample)
         if self.is_squeeze: sample = sample.squeeze()
         if self.is_unsqueeze: sample = sample.unsqueeze(axis=-3)
         if self.t_max is not None: sample = sample[..., :self.t_max]

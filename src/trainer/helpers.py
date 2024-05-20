@@ -1,11 +1,13 @@
+import os
 import time 
 from joblib import dump, load
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
+import wandb
 
 from src.utils.common import printLog
-from src.utils.plotting import plotData
+from src.utils.plotting import plot_data, plot_reconstructions
 
 def save_sklearn_model(model, filename):
     dump(model, filename)
@@ -56,7 +58,9 @@ def vizualize(
     buffer_max, 
     buffer_cnt,
     plot_type,
-    verbose
+    verbose,
+    logdir,
+    logger
 ):
     start_plotting_time = time.time()
     
@@ -67,8 +71,10 @@ def vizualize(
 
     printLog(f"Epoch {epoch}, step {step}", logfile=logfile)
 
+    artifacts_dir = os.path.join(logdir, mode)
+    if not os.path.exists(artifacts_dir): os.makedirs(artifacts_dir)
+
     #pca embeddnigs
-    if verbose - 1 > 0: printLog("Plotting PCA...", logfile=logfile)
     X, y = get_embeddings(
         model, 
         test_dataset, 
@@ -78,20 +84,40 @@ def vizualize(
         device=device, 
         logfile=logfile,
     )
-    fig, ax = plt.subplots(1, 2, figsize=(12, 3))
-    plotData(X, y, method="pca", ax=ax[0], plot_type=plot_type)
+
+    if verbose - 1 > 0: printLog("Plotting PCA...", logfile=logfile)
+    fig = plt.figure(figsize=(6, 3))
+    ax = plt.subplot()
+    plot_data(X, y, method="pca", ax=ax, plot_type=plot_type)
+    plt.title("PCA")
+    plt.tight_layout()
+    pca_plot = os.path.join(artifacts_dir, f'pca.png')
+    fig.savefig(pca_plot, dpi=fig.dpi)
+    fig.savefig(f'pca.png', dpi=fig.dpi)
+    plt.show()
     
     #plot reconstruction
-    if verbose - 1 > 0: printLog("Plotting reconstruction...", logfile=logfile)
-    ax[1].plot(imgs[0].squeeze()[0], label="data", color="b", marker="o")
     if mode == "train": model.eval()
     imgs_reconstructed = model.reconstruct(imgs.to(device))
     if mode == "train": model.train()
-    ax[1].plot(imgs_reconstructed[0].squeeze()[0].detach().cpu(), label="approximation", color="r")
+
+    n_channels = imgs.shape[-2]
+    fig, ax = plt.subplots(nrows=n_channels, ncols=1, figsize=(6, 3*n_channels))
+    if verbose - 1 > 0: printLog("Plotting reconstruction...", logfile=logfile)
+    plot_reconstructions(imgs[0], imgs_reconstructed[0], ax=ax, max_t=128)
+    plt.tight_layout()
+    reconstructions_plot = os.path.join(artifacts_dir, f'reconstructions.png')
+    fig.savefig(reconstructions_plot, dpi=fig.dpi)
+    fig.savefig(f'reconstructions.png', dpi=fig.dpi)
     plt.show()
 
     end_plotting_time = time.time()
     if verbose - 2 > 0: printLog(f"Plotting time: {end_plotting_time - start_plotting_time} s", logfile=logfile)
+
+    logger.update_without_averaging({
+        "pca": wandb.Image(pca_plot),
+        "reconstructions": wandb.Image(reconstructions_plot),
+    })
 
 def eval_ml_model(
     model,
@@ -125,6 +151,7 @@ def eval_ml_model(
         device=device, 
         logfile=logfile,
     )
+
     if verbose - 2 > 0: printLog("Embeddings shape:", X.shape, logfile=logfile)
     results = {}
     trained_models = {}

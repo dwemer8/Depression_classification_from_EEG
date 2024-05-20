@@ -81,7 +81,7 @@
     "loss_reduction": "mean",
     "model_description": "duration, finetune, 60 s, AE",
     "artifact" : "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v23",
-    "file": "85_epoch.pth",
-    "ml_artifact" : "dmitriykornilov_team/EEG_depression_classification/duration._finetune._60_s._AE_svm.SVC:v4",
-    "ml_file": "0_epoch_svm.SVC_final.pth"
+    "file": "85_epoch.pth"
+    #"ml_artifact" : "dmitriykornilov_team/EEG_depression_classification/duration._finetune._60_s._AE_svm.SVC:v4",
+    #"ml_file": "0_epoch_svm.SVC_final.pth"
 }

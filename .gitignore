@@ -11,3 +11,4 @@ logs/
 figs/
 *current_results.json
 experiments.ipynb
+*.png
