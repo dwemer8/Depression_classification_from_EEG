@@ -322,13 +322,13 @@ for model_config in [
     default_config.update({"hash": hash})
     dc = Config(default_config)
     for channel_name, channel_index in zip([
-            # "None", 
-            "fz", 
+            "None", 
+            # "fz", 
             # "cz", 
             # "pz"
         ], [
-            # None, 
-            0, 
+            None, 
+            # 0, 
             # 1, 
             # 2
         ]

@@ -17,7 +17,7 @@ class Logger:
         model_name : str = None,
 
         #wandb/tensorboard
-        run_name : str = None,
+        run_name : str = None, #it will be used to create artifact directory
         
         #tensorboard
         log_dir : str = None,
@@ -26,20 +26,20 @@ class Logger:
         project_name : str = None,
         config : dict = {},
         log_freq : int = 10,
-        model_description : str = None, #it will be used to create artifact directory
+        model_description : str = None,
         watch_model : bool = True
     ):
         
         self.log_type = log_type
-        self.run_name = run_name
+        self.run_name = replace_unsupported_path_symbols(run_name)
         self.hash = config["hash"]
         self.run_hash = config["run_hash"]
         self.model = model
         self.model_name = model_name
-        self.model_description = replace_unsupported_path_symbols(model_description)
+        self.model_description = model_description
         self.ml_model_name = objectName(config["ml"]["ml_model"][config["ml"]["ml_metric_prefix"]])
         self.save_path = save_path
-        self.is_save_model = self.save_path is not None and self.model_description is not None
+        self.is_save_model = self.save_path is not None and self.run_name is not None
         self.reset()
         
         if self.log_type == "tensorboard":
@@ -61,8 +61,8 @@ class Logger:
             self.run = wandb.init(name=self.run_name, project=project_name, config=config)  # Initialize wandb
             
             if watch_model: 
-                self.artifact = wandb.Artifact(self.model_description, type='model', description=model_description, metadata=config)
-                self.artifact_ml = wandb.Artifact(self.model_description + "_" + self.ml_model_name, type='ml_model', description=model_description, metadata=config)
+                self.artifact = wandb.Artifact(self.run_name + "_" + self.run_hash, type='model', description=model_description, metadata=config)
+                self.artifact_ml = wandb.Artifact(self.run_name + "_" + self.ml_model_name + "_" + self.run_hash, type='ml_model', description=model_description, metadata=config)
                 wandb.watch(model, log_freq=log_freq)
             
         elif self.log_type == "none":
@@ -155,7 +155,7 @@ class Logger:
             pass
         
         elif self.is_save_model:
-            save_dir = os.path.join(self.save_path, self.model_description, self.hash, self.run_hash)
+            save_dir = os.path.join(self.save_path, self.run_name, self.hash, self.run_hash)
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
             
@@ -172,8 +172,8 @@ class Logger:
                 if self.log_type == "wandb":
                     self._log_ml_model(ml_model_file)
         
-        elif self.save_path is not None and self.model_description is None:
-            raise ValueError("Model_description hasn't been set whereas save_path has")
+        elif self.save_path is not None and self.run_name is None:
+            raise ValueError("Run_name hasn't been set whereas save_path has")
         
     def finish(self):
         if self.log_type == "tensorboard": 

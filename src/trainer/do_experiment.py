@@ -42,8 +42,13 @@ Experiment function
 
 def do_experiment(config, device="cpu", verbose=0):
     try:
-        if config["log_path"] is not None: logfile = open(os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"])), "a")
-        else: logfile = None
+        if config["log_path"] is not None: 
+            logdir = os.path.join(config["log_path"], replace_unsupported_path_symbols(config["run_name"]))
+            if not os.path.exists(logdir): os.makedirs(logdir)
+            logfile = open(os.path.join(logdir, "log.txt"), "a")
+        else: 
+            logdir = None
+            logfile = None
 
         #############
         #Data reading
@@ -189,7 +194,7 @@ def do_experiment(config, device="cpu", verbose=0):
     
         logger = Logger(
             log_type=config["logger"]["log_type"], 
-            run_name=config["model"]["model_description"],
+            run_name=config["run_name"],
             save_path=config["save_path"],
             model=model,
             model_name=config["model"]["model"],        
@@ -213,7 +218,7 @@ def do_experiment(config, device="cpu", verbose=0):
 
         #NB:Cannot be placed before get_model() since it updates config
         #print whole config
-        printLog('#################### ' + config["model"]["model_description"] + ' ####################', logfile=logfile)
+        printLog('#################### ' + config["run_name"] + ' ####################', logfile=logfile)
         printLog(json.dumps(config, indent=4), logfile=logfile)
         
         #NB:should be just before training because replace names by objects. Cannot be placed before Logger since it logs config
@@ -299,7 +304,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
                     logfile=logfile,
-                    logdir=os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"]) + "_artifacts"),
+                    logdir=logdir,
                     **config["ml_validation"],
                 )
                 if results == {}: break
@@ -383,7 +388,7 @@ def do_experiment(config, device="cpu", verbose=0):
                     step_max=train_config["steps"]["step_max"] if train_config is not None else None, 
                     verbose=verbose,
                     logfile=logfile,
-                    logdir=os.path.join(config["log_path"], replace_unsupported_path_symbols(config["model"]["model_description"]) + "_artifacts"),
+                    logdir=logdir,
                     **config["ml"],
                 )
                 results_all[mode] = results

@@ -31,7 +31,7 @@
         # {
         #     "verbose" : 0,
         #     "seed" : {SEED},
-        #     "cv_scorer" : "balanced_accuracy_score",
+        #     "cv_scorer" : ["balanced_accuracy_score", "hard"],
         #     "metrics" : [["balanced_accuracy_score", "hard"], ["recall_score", "hard"], ["precision_score", "hard"], ["average_precision_score", "soft"], ["roc_auc_score", "soft"], ["f1_score", "hard"], ["accuracy_score", "hard"]],
         #     "n_splits_inner" : 5,
         #     "n_splits_outer" : 10,
