@@ -29,7 +29,7 @@ def get_eval_functions(eval_functions_config, module_name="src.evaluation.models
 def get_eval_functions_kwargs(kwargs_list):
     kwargs_list = deepcopy(kwargs_list)
     for kwargs in kwargs_list:
-        kwargs["cv_scorer"] = getattr(sklearn.metrics, kwargs["cv_scorer"])
+        kwargs["cv_scorer"] = [getattr(sklearn.metrics, kwargs["cv_scorer"][0]), kwargs["cv_scorer"][1]] #[func, mode]
         
         for tag in ["metrics", "metrics_for_CI"]:
             if tag in kwargs:

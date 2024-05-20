@@ -22,7 +22,7 @@ def evaluateClassifier(
     verbose=1,
     test_size=0.33,
     seed=DEFAULT_SEED,
-    cv_scorer=balanced_accuracy_score,
+    cv_scorer=[balanced_accuracy_score, "hard"],
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
@@ -53,7 +53,7 @@ def evaluateClassifier(
         gscv_clf = GridSearchCV(
             model,
             param_grid=param_grid,
-            scoring=make_scorer(cv_scorer),
+            scoring=make_scorer(cv_scorer[0], response_method="predict_proba" if cv_scorer[1] == "soft" else "predict"),
             cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
             n_jobs=-1,
             verbose=max(verbose-1, 0)
@@ -99,7 +99,7 @@ def evaluateClassifier_inner_outer_cv(
     param_grid, 
     verbose=1,
     seed=DEFAULT_SEED,
-    cv_scorer=accuracy_score,
+    cv_scorer=[balanced_accuracy_score, "hard"],
     metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_splits_inner=10,
     n_splits_outer=10,
@@ -116,7 +116,7 @@ def evaluateClassifier_inner_outer_cv(
         gscv_clf = GridSearchCV(
             estimator=model,  
             param_grid=param_grid,
-            scoring=make_scorer(cv_scorer),
+            scoring=make_scorer(cv_scorer[0], response_method="predict_proba" if cv_scorer[1] == "soft" else "predict"),
             cv=inner_cv,
             n_jobs=-1,
             verbose=max(verbose-1, 0)
@@ -200,7 +200,7 @@ def get_bootstrap_classifier_values(
     verbose=1,
     test_size=0.33,
     seed=DEFAULT_SEED,
-    cv_scorer=balanced_accuracy_score,
+    cv_scorer=[balanced_accuracy_score, "hard"],
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
     logfile=None,
@@ -226,7 +226,7 @@ def get_bootstrap_classifier_values(
         gscv_clf = GridSearchCV(
             model,
             param_grid=param_grid,
-            scoring=make_scorer(cv_scorer),
+            scoring=make_scorer(cv_scorer[0], response_method="predict_proba" if cv_scorer[1] == "soft" else "predict"),
             cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=seed),
             n_jobs=-1,
             verbose=max(verbose-1, 0)

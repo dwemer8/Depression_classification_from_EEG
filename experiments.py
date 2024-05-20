@@ -334,7 +334,7 @@ for model_config in [
         ]
     ):
         ml_to_train = True
-        if channel_name is not None:   
+        if channel_name is not "None":   
             model_config.update({
                 "artifact": "dmitriykornilov_team/EEG_depression_classification/duration._finetune._60_s._AE:v14",
                 "file": "0_epoch_final.pth",
