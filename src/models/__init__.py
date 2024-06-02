@@ -16,6 +16,10 @@ from .AE import AE, AE_framework
 from .UNet import UNet
 from src.utils.common import upd, printLog
 from src.trainer.helpers import load_sklearn_model
+from . import honke_higgins_2010_15274
+
+def parameters_number(model):
+    return torch.sum(torch.tensor([torch.prod(torch.tensor(parameters.shape)) for parameters in model.parameters()]))
 
 def get_model(model_config):
     model, config = getattr(ModelsZoo, "get_" + model_config["model"])(model_config)
@@ -305,27 +309,76 @@ class ModelsZoo:
             **model_config["framework"],
         )
         return model, model_config
-    
-    def get_UNet(config):
+
+    def get_AE_honke_higgins_2010_15274(config):
+        '''
+        parameters for (B, 3, 128) -> (B, 10)
+        '''
+
         if config is None: config = {}
-        model_config = {
-            "input_dim": (3, 128),
-            "c1": 3,
-            "c2": 3,
-            "c3": 2,
-            "c_neck": 1,
+        framework_config = {
             "loss_reduction" : "mean", #"mean"/"sum
-            "model_description": "UNet, 3 ch., 3/3/2/1, 7/7/5/3/3/3/3/1, PReLU",
-            "n_channels" : 3,
-            "n_classes": 3,
         }
-        model_config.update(config)
-        model = UNet(
-            n_channels=model_config["n_channels"],
-            n_classes=model_config["n_classes"],
-            c1=model_config["c1"],
-            c2=model_config["c2"],
-            c3=model_config["c3"],
-            c_neck=model_config["c_neck"],
+        encoder_config = {
+            "convs_params" : [
+                {"in_channels": 3, "out_channels": 32, "kernel_size": 6, "stride": 2},
+                {"in_channels": 32, "out_channels": 6, "kernel_size": 6, "stride": 2},
+            ],
+            "activation" : "ReLU",
+            "linear_params" : [
+                {"in_features" : 174, "out_features": 128},
+                {"in_features" : 128, "out_features": 10},
+            ]
+        }
+        decoder_config = {
+            "activation" : "ReLU",
+            "linear_params" : [
+                {"in_features" : 10, "out_features": 128},
+                {"in_features" : 128, "out_features": 174, "penultimate_dim": 6},
+            ],
+            "convs_params" : [
+                {"in_channels": 6, "out_channels": 32, "kernel_size": 6, "stride": 2},
+                {"in_channels": 32, "out_channels": 3, "kernel_size": 6, "stride": 2},
+            ],
+        }
+        model_config = {
+            "framework": framework_config,
+            "encoder": encoder_config,
+            "decoder": decoder_config,
+            
+            "model_description": "AE_honke_higgins_2010_15274",
+            "model": "AE_honke_higgins_2010_15274",
+            "loss_reduction" : framework_config["loss_reduction"],  #for compatibility with train function
+        }
+        model_config = upd(model_config, config)
+        model = AE_framework(
+            honke_higgins_2010_15274.Encoder(**model_config["encoder"]),
+            honke_higgins_2010_15274.Decoder(**model_config["decoder"]),
+            **model_config["framework"],
         )
         return model, model_config
+    
+    # def get_UNet(config):
+    #     if config is None: config = {}
+    #     model_config = {
+    #         "input_dim": (3, 128),
+    #         "c1": 3,
+    #         "c2": 3,
+    #         "c3": 2,
+    #         "c_neck": 1,
+    #         "loss_reduction" : "mean", #"mean"/"sum
+    #         "model_description": "UNet, 3 ch., 3/3/2/1, 7/7/5/3/3/3/3/1, PReLU",
+    #         "n_channels" : 3,
+    #         "n_classes": 3,
+    #     }
+    #     model_config.update(config)
+    #     model = UNet(
+    #         n_channels=model_config["n_channels"],
+    #         n_classes=model_config["n_classes"],
+    #         c1=model_config["c1"],
+    #         c2=model_config["c2"],
+    #         c3=model_config["c3"],
+    #         c_neck=model_config["c_neck"],
+    #     )
+    #     return model, model_config
+     

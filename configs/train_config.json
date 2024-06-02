@@ -16,7 +16,7 @@
     },
     "validation": {
         "check_period": 1e10,
-        "plot_period": null, #1e10
+        "plot_period": 1e10,
         "check_period_per_epoch": 5,
         "plot_period_per_epoch": 5
     }

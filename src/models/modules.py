@@ -7,6 +7,35 @@ import numpy as np
 # simple blocks
 ###############
 
+class FlattenLinear(nn.Module):
+    def __init__(
+        self,
+        in_features : int,
+        out_features : int,
+        **args
+    ):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features, **args)
+
+    def forward(self, x: torch.Tensor):
+        return self.linear(torch.flatten(x, start_dim=1))
+    
+class UnflattenLinear(nn.Module):
+    def __init__(
+        self,
+        in_features : int,
+        out_features : int,
+        penultimate_dim: int,
+        **args
+    ):
+        super().__init__()
+        self.linear = nn.Linear(in_features, out_features, **args)
+        self.penultimate_dim = penultimate_dim
+        self.out_features = out_features
+
+    def forward(self, x: torch.Tensor):
+        return torch.unflatten(self.linear(x), dim=-1, sizes=(self.penultimate_dim, self.out_features//self.penultimate_dim))
+
 def conv_block(in_features: int, out_features: int, kernel=(3, 3), stride=(1, 1), padding=(0, 0), activation='PReLU'):
     return nn.Sequential(
         nn.Conv2d(in_features, out_features, kernel, stride, padding),
@@ -360,7 +389,7 @@ class encoder_conv(torch.nn.Module):
         self.depth = args["input_dim"][0]
         self.n_channels = args["input_dim"][1]
         self.chunk_length = args["input_dim"][2]
-        chunk_lenght_after_convs = int(((self.chunk_length - 6 + 1) - 6 + 1)/2) #57, should be checked for consistency with self.chunk_length!
+        chunk_lenght_after_convs = int(((self.chunk_length - 6 + 1) - 6 + 1)/2) #if chunk_length=14, chunk_lenght_after_convs=57, should be checked for consistency with self.chunk_length!
 
         self.conv_layers = nn.Sequential(
             conv_block(self.depth, 32, kernel=(self.n_channels, 6)),

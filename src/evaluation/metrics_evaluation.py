@@ -78,6 +78,7 @@ def get_bootstrap_estimates_for_metrics(
         method_name = get_object_name(method)
         if method_type == "soft": y_pred_ = y_prob
         elif method_type == "hard": y_pred_ = y_pred
+        else: raise ValueError(f"Unknown metric type {method_type}")
         estimates[method_name] = get_bootstrap_estimates(
             y_test, 
             y_pred_, 
@@ -112,6 +113,10 @@ def evalConfInt(
             
     scores = np.array(scores)
     if verbose > 0: print(f"N samples = {len(scores)}")
+    
+    nans_share = np.sum(np.isnan(scores).astype(int))/len(scores)
+    if nans_share > 0.5:
+        raise ValueError(f"There is {nans_share*100:.0f}% NaNs in bootstrapped scores.")
     
     perc = sts.norm.ppf(1 - alpha/2)
     estimation = np.nanmean(scores)
@@ -160,13 +165,14 @@ def evaluateMetrics(
     metrics = [],#[(average_precision_score, "soft"), (accuracy_score, "hard")],
 ):
     estimates = {}
-    y_pred = y_prob > threshold
+    y_pred = (y_prob > threshold).astype(int)
 
     #computing metrics
     for method, method_type in metrics:
         method_name = get_object_name(method)
         if method_type == "soft": y_pred_ = y_prob
         elif method_type == "hard": y_pred_ = y_pred
+        else: raise ValueError(f"Unknown metric type {method_type}")
         est = method(y_test, y_pred_)
         estimates[method_name] = est
         if verbose > 0: print(f"{method_name}: {est:0.3f}")
@@ -176,6 +182,7 @@ def evaluateMetrics(
         method_name = get_object_name(method)
         if method_type == "soft": y_pred_ = y_prob
         elif method_type == "hard": y_pred_ = y_pred
+        else: raise ValueError(f"Unknown metric type {method_type}")
         est, se = evalConfInt(
             y_test, y_pred_, stratum_vals, n_bootstraps=n_bootstraps, alpha=alpha, verbose=(verbose-1), scorer=method
         )

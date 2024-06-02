@@ -43,7 +43,7 @@ Experiment function
 def do_experiment(config, device="cpu", verbose=0):
     try:
         if config["log_path"] is not None: 
-            logdir = os.path.join(config["log_path"], replace_unsupported_path_symbols(config["run_name"]))
+            logdir = os.path.join(config["log_path"], config["hash"], replace_unsupported_path_symbols(config["run_name"]), config["run_hash"])
             if not os.path.exists(logdir): os.makedirs(logdir)
             logfile = open(os.path.join(logdir, "log.txt"), "a")
         else: 
@@ -241,7 +241,8 @@ def do_experiment(config, device="cpu", verbose=0):
         final_epoch = None
         final_model = None
         final_ml_model = None
-        trained_ml_models = None
+        last_model = None
+        last_ml_model = None
         zero_ml_tag = config["ml_validation"]["ml_eval_function_tag"][0]
 
         for curr_dataloader, dataset_config in zip(
@@ -316,28 +317,35 @@ def do_experiment(config, device="cpu", verbose=0):
                     print(json.dumps(results, indent=4), file=logfile)
         
                 scheduler.step(results['loss'])
-                
-                last_tag = "cv" if zero_ml_tag == "cv" else "bs"
-                accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.accuracy'
-                if results.get(accuracy_tag, 0) > best_clf_accuracy:
-                    best_clf_accuracy = results[accuracy_tag]
-                    best_model = deepcopy(model)
-                    best_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
-                    best_epoch = epoch
-                    if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
-                
-                if results['loss'] < best_loss:
+
+                if results['loss'] < best_loss: #validation loss from results is here 
                     best_loss = results['loss']
                     final_model = deepcopy(model)
-                    final_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
+                    final_ml_model = deepcopy(trained_ml_models[zero_ml_tag]) if trained_ml_models is not None else None
                     final_epoch = epoch
                     if verbose > 0: printLog(f"New best loss = {best_loss} on epoch {epoch}", logfile=logfile)
+
+                last_tag = "cv" if zero_ml_tag == "cv" else "bs"
+                accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.balanced_accuracy'
+                if epoch % config['train']['validation']['check_period_per_epoch'] == 0:
+                    if results[accuracy_tag] > best_clf_accuracy: #metric is computed and classifier is learnt only every n epochs
+                        best_clf_accuracy = results[accuracy_tag]
+                        best_model = deepcopy(model)
+                        best_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
+                        best_epoch = epoch
+                        if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
                 
-                if early_stopper.early_stop(results['loss']): break
+                if early_stopper.early_stop(results['loss']): break #validation loss is here
+
+            logger.save_model(
+                dataset_config["steps"]['end_epoch'] - 1, 
+                model=model, 
+                model_postfix="_pretrain" if dataset_config == pretrain_config else "_train", #dataset_config isn't None since condition at the beginning
+                ml_model=trained_ml_models[zero_ml_tag] if trained_ml_models is not None else None, 
+                ml_model_postfix="_pretrain" if dataset_config == pretrain_config else "_train" #trained_ml_models isn't needed to be checked for None, see method implementation
+            )
 
         if train_config is not None or pretrain_config is not None:
-            logger.save_model(train_config["steps"]['end_epoch'], model=model, ml_model=trained_ml_models[zero_ml_tag])
-
             if final_epoch is not None:
                 logger.save_model(final_epoch, model=final_model, ml_model=final_ml_model)
                 logger.update_summary("validation.final_epoch", final_epoch)
@@ -346,7 +354,7 @@ def do_experiment(config, device="cpu", verbose=0):
                 logger.save_model(best_epoch, model=best_model, ml_model=best_ml_model)
                 logger.update_summary("validation.best_epoch", best_epoch)
         else:
-            print("INFO: Since there is no pretrain or train, final_model is loaded from current model, final_ml_model is loaded from current ml_model and test_model with test_ml_model are Nones.")
+            print("INFO: Since there is no pretrain or train, final_model is loaded from current model, final_ml_model is loaded from current ml_model (and can be None) and test_model with test_ml_model are Nones.")
             final_model = model
             final_ml_model = ml_model
             final_epoch = 0

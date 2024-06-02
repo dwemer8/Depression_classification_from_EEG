@@ -75,13 +75,13 @@ def evaluateClassifier(
 
     estimates_train={}
     if evaluate_on_train:
-        if verbose > 0: printLog("Evaluation on the train data...", logfile=logfile)
+        if verbose > 0: printLog(f"Evaluation on the train data of shape {X_train.shape}...", logfile=logfile)
         estimates_train_time_start = time.time()
         estimates_train = evaluate(clf, X_train, y_train)
         estimates_train_time_end = time.time()
         if verbose > 0: printLog(f"Evaluation on the train data: {estimates_train_time_end - estimates_train_time_start} s", logfile=logfile)
     
-    if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the test data of shape {X_test.shape}...", logfile=logfile)
     estimates_test_time_start = time.time()
     estimates_test = evaluate(clf, X_test, y_test)
     estimates_test_time_end = time.time()
@@ -128,9 +128,9 @@ def evaluateClassifier_inner_outer_cv(
     else:
         clf = model
 
-    if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the train data of shape {X.shape}...", logfile=logfile)
     estimates_train = evaluateMetrics_cv(clf, X, y, inner_cv, metrics, verbose=(verbose-1))
-    if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the test data of shape {X.shape}...", logfile=logfile)
     estimates_test = evaluateMetrics_cv(clf, X, y, outer_cv, metrics, verbose=(verbose-1))
     
     return clf, {
@@ -180,10 +180,10 @@ def evaluateRegressor(
     else:
         reg = model
 
-    if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the train data of shape {X_train.shape}...", logfile=logfile)
     mse_train = evaluate(reg, X_train, y_train)
     
-    if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the test data of shape {X_test.shape}...", logfile=logfile)
     mse_test = evaluate(reg, X_test, y_test)
 
     return reg, {
@@ -243,10 +243,10 @@ def get_bootstrap_classifier_values(
     else:
         clf = model
 
-    if verbose > 0: printLog("Evaluation on the train data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the train data of shape {X_train.shape}...", logfile=logfile)
     estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
     
-    if verbose > 0: printLog("Evaluation on the test data", logfile=logfile)
+    if verbose > 0: printLog(f"Evaluation on the test data of shape {X_test.shape}...", logfile=logfile)
     estimates_test = evaluate(clf.best_estimator_, X_test, y_test)
     
     return clf, {

@@ -184,6 +184,7 @@ def train_eval(
                 )
 
             #classifier/regressor metrics evaluation
+            #it will be true for every check_period != None when step == 0
             if (check_period is not None and step % check_period == 0) or\
             (check_steps is not None and step in check_steps):
                     trained_ml_models, _ = eval_ml_model(

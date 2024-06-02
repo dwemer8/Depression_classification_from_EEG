@@ -149,6 +149,9 @@ class Logger:
         self.artifact_ml.add_file(model_file)
             
     def save_model(self, epoch, model=None, model_postfix="", ml_model=None, ml_model_postfix=""):
+        '''
+        epoch : int/str - used only in name of the model
+        '''
         if model is None: model = self.model
         
         if self.log_type == "none":

@@ -1,5 +1,5 @@
 {
-    "avg_embeddings_over_time": true,
+    "avg_embeddings_over_time": false,
     "plot_type": "classification", #"regression"/"classification"
     "ml_model": {
         "scaler" : "preprocessing.StandardScaler",

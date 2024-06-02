@@ -18,12 +18,29 @@
         "samples_shape": null,
         "train": {
             "pretrain": null,
-            "train": null
+            "train": {
+                "source": {
+                    "name": "inhouse_dataset",
+                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
+                },
+                "size": null,
+                "n_samples": null,
+                "preprocessing": {
+                    "is_squeeze": false,
+                    "is_unsqueeze": false,
+                    "t_max": null
+                },
+                "steps": {
+                    "start_epoch": 1,
+                    "end_epoch": 6,
+                    "step_max": null
+                }
+            }
         },
         "val": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
             },
             "size": 30,
             "n_samples": null,
@@ -36,101 +53,19 @@
         "test": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_1.0.pkl"
             },
             "size": 30,
             "n_samples": null,
             "preprocessing": {
                 "is_squeeze": false,
                 "is_unsqueeze": false,
-                "t_max": null,
-                "transforms": [
-                    "zero_out_channel"
-                ],
-                "transforms_kwargs": [
-                    {
-                        "channel": null
-                    }
-                ]
+                "t_max": null
             }
         }
     },
     "model": {
-        "model": "AE_parametrized",
-        "decoder": {
-            "in_conv_config": {
-                "n_convs": 2,
-                "activation": "Sigmoid",
-                "in_channels": 24,
-                "kernel_size": 3,
-                "out_channels": 24
-            },
-            "up_blocks_config": [
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 24,
-                    "kernel_size": 3,
-                    "out_channels": 12
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 12,
-                    "kernel_size": 3,
-                    "out_channels": 6
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 6,
-                    "kernel_size": 1,
-                    "out_channels": 3,
-                    "normalize_last": true
-                }
-            ]
-        },
-        "encoder": {
-            "out_conv_config": {
-                "n_convs": 2,
-                "activation": "Sigmoid",
-                "in_channels": 24,
-                "kernel_size": 3,
-                "out_channels": 24,
-                "normalize_last": true
-            },
-            "down_blocks_config": [
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 3,
-                    "kernel_size": 7,
-                    "out_channels": 6
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 6,
-                    "kernel_size": 7,
-                    "out_channels": 12
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 12,
-                    "kernel_size": 5,
-                    "out_channels": 24
-                }
-            ]
-        },
-        "framework": {
-            "loss_reduction": "mean",
-            "first_decoder_conv_depth": 24
-        },
-        "loss_reduction": "mean",
-        "model_description": "duration, finetune, 60 s, AE",
-        "artifact": "dmitriykornilov_team/EEG_depression_classification-PR-AUC/AE_parametrized:v23",
-        "file": "85_epoch.pth"
+        "model": "AE_honke_higgins_2010_15274"
     },
     "optimizer": {
         "optimizer": "AdamW",
@@ -164,19 +99,19 @@
         },
         "validation": {
             "check_period": 10000000000.0,
-            "plot_period": null,
+            "plot_period": 10000000000.0,
             "check_period_per_epoch": 5,
             "plot_period_per_epoch": 5
         }
     },
     "ml": {
-        "avg_embeddings_over_time": true,
+        "avg_embeddings_over_time": false,
         "plot_type": "classification",
         "ml_model": {
             "scaler": "preprocessing.StandardScaler",
             "clf": "svm.SVC"
         },
-        "ml_to_train": false,
+        "ml_to_train": true,
         "ml_param_grid": {
             "clf__C": [
                 0.1,
@@ -278,7 +213,7 @@
         "ml_metric_prefix": "clf"
     },
     "ml_validation": {
-        "avg_embeddings_over_time": true,
+        "avg_embeddings_over_time": false,
         "plot_type": "classification",
         "ml_model": {
             "scaler": "preprocessing.StandardScaler",
