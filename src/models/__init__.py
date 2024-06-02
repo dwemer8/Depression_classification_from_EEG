@@ -152,6 +152,9 @@ class ModelsZoo:
     ###############
 
     def get_VAE_deep(config):
+        '''
+        fixed deep fully convolutional model
+        '''
         if config is None: config = {}
         model_config = {
             #for framework
@@ -177,6 +180,9 @@ class ModelsZoo:
         return model, model_config
 
     def get_VAE_parametrized(config):
+        '''
+        fully convolutional model
+        '''
         if config is None: config = {}
         framework_config = {
             "latent_dim": 16*32,
@@ -218,6 +224,9 @@ class ModelsZoo:
         return model, model_config
     
     def get_AE(config):
+        '''
+        fixed deep fully convolutional model
+        '''
         if config is None: config = {}
         model_config = {
             "input_dim": (3, 128),
@@ -234,6 +243,9 @@ class ModelsZoo:
         return model, model_config
 
     def get_AE_parametrized(config):
+        '''
+        fully convolutional model
+        '''
         if config is None: config = {}
         framework_config = {
             "first_decoder_conv_depth": 32,
@@ -352,6 +364,56 @@ class ModelsZoo:
         }
         model_config = upd(model_config, config)
         model = AE_framework(
+            honke_higgins_2010_15274.Encoder(**model_config["encoder"]),
+            honke_higgins_2010_15274.Decoder(**model_config["decoder"]),
+            **model_config["framework"],
+        )
+        return model, model_config
+    
+    def get_bVAE_honke_higgins_2010_15274(config):
+        '''
+        parameters for (B, 3, 128) -> (B, 10)
+        '''
+
+        if config is None: config = {}
+        framework_config = {
+            "latent_dim": 10,
+            "beta": 2,
+            "loss_reduction" : "mean", #"mean"/"sum
+        }
+        encoder_config = {
+            "convs_params" : [
+                {"in_channels": 3, "out_channels": 32, "kernel_size": 6, "stride": 2},
+                {"in_channels": 32, "out_channels": 6, "kernel_size": 6, "stride": 2},
+            ],
+            "activation" : "ReLU",
+            "linear_params" : [
+                {"in_features" : 174, "out_features": 128},
+                {"in_features" : 128, "out_features": 20},
+            ]
+        }
+        decoder_config = {
+            "activation" : "ReLU",
+            "linear_params" : [
+                {"in_features" : 10, "out_features": 128},
+                {"in_features" : 128, "out_features": 174, "penultimate_dim": 6},
+            ],
+            "convs_params" : [
+                {"in_channels": 6, "out_channels": 32, "kernel_size": 6, "stride": 2},
+                {"in_channels": 32, "out_channels": 3, "kernel_size": 6, "stride": 2},
+            ],
+        }
+        model_config = {
+            "framework": framework_config,
+            "encoder": encoder_config,
+            "decoder": decoder_config,
+            
+            "model_description": "bVAE_honke_higgins_2010_15274",
+            "model": "bVAE_honke_higgins_2010_15274",
+            "loss_reduction" : framework_config["loss_reduction"],  #for compatibility with train function
+        }
+        model_config = upd(model_config, config)
+        model = VAE(
             honke_higgins_2010_15274.Encoder(**model_config["encoder"]),
             honke_higgins_2010_15274.Decoder(**model_config["decoder"]),
             **model_config["framework"],

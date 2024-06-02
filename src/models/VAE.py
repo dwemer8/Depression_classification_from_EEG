@@ -18,9 +18,12 @@ class VAE(torch.nn.Module):
         self.encoder = encoder
         self.decoder = decoder
         self.Z_DIM = args["latent_dim"]
-        self.beta = args["beta"]
-        self.first_decoder_conv_depth = args["first_decoder_conv_depth"] #also affect loss reducing
-        self.loss_reduction = args["loss_reduction"] #sum or mean
+        self.beta = args.get("beta", 1)
+        self.first_decoder_conv_depth = args.get("first_decoder_conv_depth", None)
+        self.loss_reduction = args.get("loss_reduction", "mean") #sum or mean
+
+        if self.loss_reduction not in ["mean", "sum"]:
+            raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduction}")
         
     def _encode(self, imgs):
         z_params = self.encoder(imgs).reshape(imgs.shape[0], -1)
@@ -37,7 +40,7 @@ class VAE(torch.nn.Module):
     def _reconstruct(self, imgs):
         z_mean, z_log_std = self._encode(imgs)
         z = reparameterize(z_mean, z_log_std)
-        if self.first_decoder_conv_depth is not None: z = z.reshape(imgs.shape[0], self.first_decoder_conv_depth, -1) #for 4-layer beta-VAE
+        if self.first_decoder_conv_depth is not None: z = z.reshape(imgs.shape[0], self.first_decoder_conv_depth, -1) #for models with Conv1d
         decoded_imgs = self.decode(z)
         return decoded_imgs, z_mean, z_log_std
     
@@ -48,17 +51,17 @@ class VAE(torch.nn.Module):
         decoded_imgs, z_mean, z_log_std = self._reconstruct(imgs)
 
         z_kl = kl(z_mean, z_log_std, reduce_mode=self.loss_reduction)
-        if self.first_decoder_conv_depth is not None: reduce_dims = [1, 2]
-        else: reduce_dims = [1, 2, 3]
+        reduce_dims = list(range(len(imgs.shape)))[1:]
         if self.loss_reduction == "sum": err = ((imgs - decoded_imgs)**2).sum(reduce_dims) #for 4-layer beta-VAE 
         elif self.loss_reduction == "mean" : err = ((imgs - decoded_imgs)**2).mean(reduce_dims)
         else: raise NotImplementedError(f"Unsupported loss reduce mode {self.loss_reduction}")
-        log_p_x_given_z = -err
-        loss = -log_p_x_given_z + self.beta*z_kl
+        # log_p_x_given_z = -err
+        # loss = -log_p_x_given_z + self.beta*z_kl
+        loss = err + self.beta*z_kl
 
         return {
             'loss': loss.mean(),
-            '-log p(x|z)': -log_p_x_given_z.mean(),
+            '-log p(x|z)': err.mean(),
             'kl': z_kl.mean(),
             'decoded_imgs': decoded_imgs
         }

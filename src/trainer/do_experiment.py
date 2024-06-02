@@ -347,11 +347,11 @@ def do_experiment(config, device="cpu", verbose=0):
 
         if train_config is not None or pretrain_config is not None:
             if final_epoch is not None:
-                logger.save_model(final_epoch, model=final_model, ml_model=final_ml_model)
+                logger.save_model(final_epoch, model=final_model, ml_model=final_ml_model, model_postfix="_final", ml_model_postfix="_final")
                 logger.update_summary("validation.final_epoch", final_epoch)
 
             if best_epoch is not None:
-                logger.save_model(best_epoch, model=best_model, ml_model=best_ml_model)
+                logger.save_model(best_epoch, model=best_model, ml_model=best_ml_model, model_postfix="_test", ml_model_postfix="_test")
                 logger.update_summary("validation.best_epoch", best_epoch)
         else:
             print("INFO: Since there is no pretrain or train, final_model is loaded from current model, final_ml_model is loaded from current ml_model (and can be None) and test_model with test_ml_model are Nones.")

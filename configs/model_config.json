@@ -1,3 +1,7 @@
 {
-    "model": "AE_honke_higgins_2010_15274"
+    "model": "bVAE_honke_higgins_2010_15274",
+    "framework": {
+        "latent_dim" : 10,
+        "beta": 1
+    }
 }
