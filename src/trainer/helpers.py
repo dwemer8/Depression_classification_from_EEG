@@ -171,3 +171,42 @@ def eval_ml_model(
     if verbose - 2 > 0: printLog(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s", logfile=logfile)
 
     return trained_models, results
+
+def eval_dl_model(
+    model,
+    device, 
+    test_dataset,
+    targets_test,
+    logger,
+    logfile,
+    verbose,
+    ml_eval_function,
+    ml_eval_function_kwargs,
+    ml_eval_function_tag,
+    ml_metric_prefix
+):
+    start_evaluation_time = time.time()
+
+    # if ml_model is None or ml_param_grid is None or ml_eval_function is None or ml_to_train is None: raise ValueError("Some ml parameter is not defined")
+
+    if verbose - 1 > 0: printLog("Classifier/regressor metrics evaluation...", logfile=logfile)
+    X = test_dataset
+    y = targets_test
+
+    if verbose - 2 > 0: printLog("Dataset shape:", X.shape, logfile=logfile)
+    results = {}
+    for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
+        results[tag] = func(
+            X, 
+            y, 
+            model,
+            device, 
+            logfile=logfile, 
+            **kwargs
+        )
+    logger.update_other({ml_metric_prefix: results})
+
+    end_evaluation_time = time.time()
+    if verbose - 2 > 0: printLog(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s", logfile=logfile)
+
+    return results

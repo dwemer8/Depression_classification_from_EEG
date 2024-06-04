@@ -17,6 +17,7 @@ from .UNet import UNet
 from src.utils.common import upd, printLog
 from src.trainer.helpers import load_sklearn_model
 from . import honke_higgins_2010_15274
+from . import ellis_sattiraju_2023_10385424
 
 def parameters_number(model):
     return torch.sum(torch.tensor([torch.prod(torch.tensor(parameters.shape)) for parameters in model.parameters()]))
@@ -420,6 +421,48 @@ class ModelsZoo:
         )
         return model, model_config
     
+    def get_ellis_sattiraju_2023_10385424(config):
+        model_config = {
+            "model_parameters": {
+                "modules_params": [
+                    ("Conv1d", {"in_channels": 3, "out_channels" : 5, "kernel_size" : 10, "stride": 1}),
+                    ("ELU", {}),
+                    ("MaxPool1d", {"kernel_size": 2, "stride": 2}),
+                    ("BatchNorm1d", {"num_features": 5}),
+
+                    ("Conv1d", {"in_channels": 5, "out_channels" : 10, "kernel_size" : 10, "stride": 1}),
+                    ("ELU", {}),
+                    ("MaxPool1d", {"kernel_size": 2, "stride": 2}),
+                    ("BatchNorm1d", {"num_features": 10}),
+
+                    ("Conv1d", {"in_channels": 10, "out_channels" : 10, "kernel_size" : 10, "stride": 1}),
+                    ("ELU", {}),
+                    ("MaxPool1d", {"kernel_size": 2, "stride": 2}),
+                    ("BatchNorm1d", {"num_features": 10}),
+
+                    ("Conv1d", {"in_channels": 10, "out_channels" : 15, "kernel_size" : 5, "stride": 1}),
+                    ("ELU", {}),
+                    ("MaxPool1d", {"kernel_size": 2, "stride": 2}),
+                    ("BatchNorm1d", {"num_features": 15}),
+
+                    ("Dropout", {"p": 0.5}),
+                    ("FlattenLazyLinear", {"out_features": 64}),
+                    ("ELU", {}),
+
+                    ("Dropout", {"p": 0.5}),
+                    ("LazyLinear", {"out_features": 32}),
+                    ("ELU", {}),
+
+                    ("Dropout", {"p": 0.5}),
+                    ("LazyLinear", {"out_features": 2}),
+
+                    # ("Softmax", {"dim" : 1})
+                ]
+            }
+        }
+        model_config = upd(model_config, config)
+        return ellis_sattiraju_2023_10385424.FNN(**model_config["model_parameters"]), model_config
+    
     # def get_UNet(config):
     #     if config is None: config = {}
     #     model_config = {
@@ -443,4 +486,3 @@ class ModelsZoo:
     #         c_neck=model_config["c_neck"],
     #     )
     #     return model, model_config
-     

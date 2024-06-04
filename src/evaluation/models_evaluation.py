@@ -8,11 +8,51 @@ from .metrics_evaluation import evaluateMetrics, evaluateMetrics_cv, get_bootstr
 from ..utils.common import get_object_name, printLog
 from ..utils import DEFAULT_SEED
 
-
+import torch
+import torch.nn as nn
 
 ##########################################################################################
 # model evaluation
 ##########################################################################################
+
+def evaluateDeepClassifier(
+    X,
+    y,
+    model,
+    device,
+    verbose=1,
+    metrics = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
+    metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
+    n_bootstraps = 1000,
+    logfile=None,
+):
+    def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):
+        y_hat = clf(torch.tensor(X).to(torch.float32).to(device)).cpu()
+        # y_pred = y_hat[:, 0] < y_hat[:, 1]
+        y_proba = nn.functional.softmax(y_hat, dim=1)[:, 1].detach().numpy()
+
+        estimates = evaluateMetrics(
+            y, 
+            y_proba, 
+            verbose=(verbose-1), 
+            metrics=metrics,
+            metrics_for_CI=metrics_for_CI,
+            n_bootstraps=n_bootstraps,
+            stratum_vals=y
+        )
+        return estimates
+    
+    clf = model
+
+    if verbose > 0: printLog(f"Evaluation on the test data of shape {X.shape}...", logfile=logfile)
+    estimates_test_time_start = time.time()
+    estimates_test = evaluate(clf, X, y)
+    estimates_test_time_end = time.time()
+    if verbose > 0: printLog(f"Evaluation on the test data: {estimates_test_time_end - estimates_test_time_start} s", logfile=logfile)
+
+    return {
+        "test": estimates_test
+    }
 
 def evaluateClassifier(
     X,

@@ -20,6 +20,18 @@ class FlattenLinear(nn.Module):
     def forward(self, x: torch.Tensor):
         return self.linear(torch.flatten(x, start_dim=1))
     
+class FlattenLazyLinear(nn.Module):
+    def __init__(
+        self,
+        out_features : int,
+        **args
+    ):
+        super().__init__()
+        self.linear = nn.LazyLinear(out_features, **args)
+
+    def forward(self, x: torch.Tensor):
+        return self.linear(torch.flatten(x, start_dim=1))
+    
 class UnflattenLinear(nn.Module):
     def __init__(
         self,
@@ -30,6 +42,21 @@ class UnflattenLinear(nn.Module):
     ):
         super().__init__()
         self.linear = nn.Linear(in_features, out_features, **args)
+        self.penultimate_dim = penultimate_dim
+        self.out_features = out_features
+
+    def forward(self, x: torch.Tensor):
+        return torch.unflatten(self.linear(x), dim=-1, sizes=(self.penultimate_dim, self.out_features//self.penultimate_dim))
+    
+class UnflattenLazyLinear(nn.Module):
+    def __init__(
+        self,
+        out_features : int,
+        penultimate_dim: int,
+        **args
+    ):
+        super().__init__()
+        self.linear = nn.LazyLinear(out_features, **args)
         self.penultimate_dim = penultimate_dim
         self.out_features = out_features
 

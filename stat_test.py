@@ -70,7 +70,7 @@ from src.utils import DEFAULT_SEED
 from src.utils.common import seed_all, printLog, upd, read_json_with_comments
 from src.data.data_reading import DataReader
 from src.utils.plotting import printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
-from src.data.dataset import InMemoryDataset
+from src.data.dataset import InMemoryUnsupervisedDataset
 from src.utils.parser import parse_ml_config
 from src.trainer.evaluate_ml import evaluate_ml
 
@@ -161,16 +161,16 @@ def stattest(config, verbose=0):
         })
 
         if pretrain_config is not None: 
-            pretrain_dataset = InMemoryDataset(
+            pretrain_dataset = InMemoryUnsupervisedDataset(
                 chunks_pretrain, **pretrain_config["preprocessing"]
             )
-        train_dataset = InMemoryDataset(
+        train_dataset = InMemoryUnsupervisedDataset(
             chunks_train, **train_config["preprocessing"]
         )
-        val_dataset = InMemoryDataset(
+        val_dataset = InMemoryUnsupervisedDataset(
             chunks_val, **val_config["preprocessing"]
         )
-        test_dataset = InMemoryDataset(
+        test_dataset = InMemoryUnsupervisedDataset(
             chunks_test, **test_config["preprocessing"]
         )
     

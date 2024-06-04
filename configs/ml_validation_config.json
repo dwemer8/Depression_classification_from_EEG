@@ -21,7 +21,8 @@
     },
     "ml_eval_function" : [
         # "evaluateClassifier_inner_outer_cv",
-        "evaluateClassifier"
+        #"evaluateClassifier",
+        "evaluateDeepClassifier"
     ],
     "ml_eval_function_tag" : [
         # "cv", 
@@ -38,10 +39,10 @@
         # },
         {
             "verbose" : 0,
-            "test_size" : 0.33,
-            "seed" : {SEED},
-            "evaluate_on_train": false,
-            "cv_scorer" : ["balanced_accuracy_score", "hard"],
+            #"test_size" : 0.33,
+            #"seed" : {SEED},
+            #"evaluate_on_train": false,
+            #"cv_scorer" : ["balanced_accuracy_score", "hard"],
             "metrics" : [],
             "metrics_for_CI": [["balanced_accuracy_score", "hard"]],
             "n_bootstraps" : 100 #!!CHECK

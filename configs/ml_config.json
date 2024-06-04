@@ -21,7 +21,8 @@
     },
     "ml_eval_function" : [
         # "evaluateClassifier_inner_outer_cv",
-        "evaluateClassifier"
+        #"evaluateClassifier"
+        "evaluateDeepClassifier"
     ],
     "ml_eval_function_tag" : [
         # "cv", 
@@ -38,10 +39,10 @@
         # },
         {
             "verbose" : 10,
-            "test_size" : 0.33,
-            "seed" : {SEED},
-            "evaluate_on_train": false,
-            "cv_scorer" : ["average_precision_score", "soft"],
+            #"test_size" : 0.33,
+            #"seed" : {SEED},
+            #"evaluate_on_train": false,
+            #"cv_scorer" : ["average_precision_score", "soft"],
             "metrics" : [["balanced_accuracy_score", "hard"], ["recall_score", "hard"], ["precision_score", "hard"], ["average_precision_score", "soft"], ["roc_auc_score", "soft"], ["f1_score", "hard"], ["accuracy_score", "hard"]],
             "metrics_for_CI": [["balanced_accuracy_score", "hard"], ["recall_score", "hard"], ["precision_score", "hard"], ["average_precision_score", "soft"], ["roc_auc_score", "soft"], ["f1_score", "hard"], ["accuracy_score", "hard"]],
             "n_bootstraps" : 1000 #!!CHECK

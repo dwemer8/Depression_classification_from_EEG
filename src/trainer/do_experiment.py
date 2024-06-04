@@ -19,6 +19,7 @@ from matplotlib import rc
 rc('animation', html='jshtml')
 
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
 
 '''
@@ -27,7 +28,7 @@ Project libraries
 from src.utils.common import seed_all, printLog, upd, wrap_field, replace_unsupported_path_symbols
 from src.data.data_reading import DataReader
 from src.utils.plotting import dict_to_df, printDatasetMeta, printDataloaderMeta, plotSamplesFromDataset
-from src.data.dataset import InMemoryDataset
+from src.data.dataset import InMemoryUnsupervisedDataset, InMemorySupervisedDataset
 from src.utils.logger import Logger
 from src.utils.parser import parse_ml_config, parse_dataset_preprocessing_config
 from src.trainer.early_stopper import EarlyStopper
@@ -115,47 +116,90 @@ def do_experiment(config, device="cpu", verbose=0):
         else:
             raise NotImplementedError("Unsupported datasets configuration")
 
-        if pretrain_config is not None: chunks_pretrain, targets_pretrain = pretrain_set["chunk"], pretrain_set["target"]
-        if train_config is not None: chunks_train, targets_train = train_set["chunk"], train_set["target"]
-        chunks_val, chunks_test = val_set["chunk"], test_set["chunk"]
-        targets_val, targets_test = val_set["target"], test_set["target"]
+        model_type = config["model"].get("type", "unsupervised")
+        if model_type == "unsupervised":
+            if pretrain_config is not None: chunks_pretrain, targets_pretrain = pretrain_set["chunk"], pretrain_set["target"]
+            if train_config is not None: chunks_train, targets_train = train_set["chunk"], train_set["target"]
+            chunks_val, chunks_test = val_set["chunk"], test_set["chunk"]
+            targets_val, targets_test = val_set["target"], test_set["target"]
 
-        #TODO: add to upd function ability to add new fields
-        if pretrain_config is not None: 
+            #TODO: add to upd function ability to add new fields
+            if pretrain_config is not None: 
+                config["dataset"] = upd(config["dataset"], {
+                    "train": {
+                        "pretrain": {"n_samples": len(chunks_pretrain)}
+                    }
+                })
+            if train_config is not None:
+                config["dataset"] = upd(config["dataset"], {
+                    "train": {
+                        "train": {"n_samples": len(chunks_train)}
+                    }
+                })
+                
             config["dataset"] = upd(config["dataset"], {
-                "train": {
-                    "pretrain": {"n_samples": len(chunks_pretrain)}
-                }
+                "samples_shape": chunks_test[0].shape,
+                "val": {"n_samples": len(chunks_val)},
+                "test": {"n_samples": len(chunks_test)},
             })
-        if train_config is not None:
-            config["dataset"] = upd(config["dataset"], {
-                "train": {
-                    "train": {"n_samples": len(chunks_train)}
-                }
-            })
+
+            if pretrain_config is not None: 
+                pretrain_dataset = InMemoryUnsupervisedDataset(
+                    chunks_pretrain, **parse_dataset_preprocessing_config(pretrain_config["preprocessing"])
+                )
+            if train_config is not None: 
+                train_dataset = InMemoryUnsupervisedDataset(
+                    chunks_train, **parse_dataset_preprocessing_config(train_config["preprocessing"])
+                )
+            val_dataset = InMemoryUnsupervisedDataset(
+                chunks_val, **parse_dataset_preprocessing_config(val_config["preprocessing"])
+            )
+            test_dataset = InMemoryUnsupervisedDataset(
+                chunks_test, **parse_dataset_preprocessing_config(test_config["preprocessing"])
+            )
             
-        config["dataset"] = upd(config["dataset"], {
-            "samples_shape": chunks_test[0].shape,
-            "val": {"n_samples": len(chunks_val)},
-            "test": {"n_samples": len(chunks_test)},
-        })
+        elif model_type == "supervised":
+            #TODO: add to upd function ability to add new fields
+            if pretrain_config is not None: 
+                config["dataset"] = upd(config["dataset"], {
+                    "train": {
+                        "pretrain": {"n_samples": len(pretrain_set['chunk'])}
+                    }
+                })
 
-        if pretrain_config is not None: 
-            pretrain_dataset = InMemoryDataset(
-                chunks_pretrain, **parse_dataset_preprocessing_config(pretrain_config["preprocessing"])
+            if train_config is not None:
+                config["dataset"] = upd(config["dataset"], {
+                    "train": {
+                        "train": {"n_samples": len(train_set['chunk'])}
+                    }
+                })
+                
+            config["dataset"] = upd(config["dataset"], {
+                "samples_shape": test_set['chunk'][0].shape,
+                "val": {"n_samples": len(val_set['chunk'])},
+                "test": {"n_samples": len(test_set['chunk'])},
+            })
+
+            if pretrain_config is not None: 
+                pretrain_dataset = InMemorySupervisedDataset(
+                    list(zip(pretrain_set['chunk'], pretrain_set["target"])) , **parse_dataset_preprocessing_config(pretrain_config["preprocessing"])
+                )
+            if train_config is not None: 
+                train_dataset = InMemorySupervisedDataset(
+                    list(zip(train_set['chunk'], train_set["target"])), **parse_dataset_preprocessing_config(train_config["preprocessing"])
+                )
+            val_dataset = InMemorySupervisedDataset(
+                list(zip(val_set['chunk'], val_set["target"])), **parse_dataset_preprocessing_config(val_config["preprocessing"])
             )
-        if train_config is not None: 
-            train_dataset = InMemoryDataset(
-                chunks_train, **parse_dataset_preprocessing_config(train_config["preprocessing"])
+            test_dataset = InMemorySupervisedDataset(
+                list(zip(test_set['chunk'], test_set["target"])), **parse_dataset_preprocessing_config(test_config["preprocessing"])
             )
-        val_dataset = InMemoryDataset(
-            chunks_val, **parse_dataset_preprocessing_config(val_config["preprocessing"])
-        )
-        test_dataset = InMemoryDataset(
-            chunks_test, **parse_dataset_preprocessing_config(test_config["preprocessing"])
-        )
+            
+        else:
+            raise ValueError("Unsupported training type")
+        
     
-        if verbose - 2 > 0: 
+        if verbose - 2 > 0 and model_type == "unsupervised": 
             printDatasetMeta(val_dataset, test_dataset, train_dataset=None if train_config is None else train_dataset, pretrain_dataset=None if pretrain_config is None else pretrain_dataset, logfile=logfile)
             if config.get("display_mode", "terminal") == "ipynb": plotSamplesFromDataset(test_dataset)
     
@@ -169,19 +213,12 @@ def do_experiment(config, device="cpu", verbose=0):
     
         #Model and environment
         config["model"].update({
-            "input_dim" : test_dataset[0].shape,
+            "input_dim" : test_dataset[0].shape if model_type == "unsupervised" else test_dataset[0][0].shape,
         })
         model, config["model"] = get_model(config["model"])
         model = model.to(device)
-        if verbose - 1 > 0: printLog('model ' + config["model"]['model_description'] + ' is created', logfile=logfile)
+        if verbose - 1 > 0: printLog('model ' + config["model"].get('model_description', config["model"]["model"])  + ' is created', logfile=logfile)
         if verbose - 2 > 0: printLog(model, logfile=logfile)
-    
-        #optimizer and scheduler
-        optimizer = getattr(torch.optim, config["optimizer"]["optimizer"])(model.parameters(), **config["optimizer"]["kwargs"])
-        if verbose - 1 > 0: printLog(f'Optimizer {type(optimizer).__name__} is instantiated', logfile=logfile)
-    
-        scheduler = getattr(torch.optim.lr_scheduler, config["scheduler"]["scheduler"])(optimizer, **config["scheduler"]["kwargs"])
-        if verbose - 1 > 0: printLog(f'Scheduler {type(scheduler).__name__} is instantiated', logfile=logfile)
 
         #NB: Should be placed before Logger since it uses wandb.init() and wandb.finish()
         #Download weights
@@ -191,6 +228,40 @@ def do_experiment(config, device="cpu", verbose=0):
         ml_model = None #will be used further to update config
         if "ml_artifact" in config["model"] and "ml_file" in config["model"]:
             ml_model = load_sklearn_model_from_wandb(config["model"]["ml_artifact"], config["model"]["ml_file"], verbose=verbose)
+
+        # TESTS
+        model.eval()
+        test_data_point = test_dataset[0][None].to(device) if model_type == "unsupervised" else test_dataset[0][0][None].to(device)
+        inference_result = model(test_data_point)
+        if model_type == "unsupervised":
+            reconstruct_result = model.reconstruct(test_data_point)
+            encode_result = model.encode(test_data_point)
+        if verbose - 1 > 0: 
+            printLog(f"Test data point shape: {test_data_point.shape}", logfile=logfile)
+            printLog(f"Test inference result length: {len(inference_result)}", logfile=logfile)
+            if model_type == "unsupervised":
+                printLog(f"Test reconstruct shape: {reconstruct_result.shape}", logfile=logfile)
+                printLog(f"Test encode shape: {encode_result.shape}", logfile=logfile)
+    
+        #optimizer and scheduler
+        optimizer = getattr(torch.optim, config["optimizer"]["optimizer"])(model.parameters(), **config["optimizer"]["kwargs"])
+        if verbose - 1 > 0: printLog(f'Optimizer {type(optimizer).__name__} is instantiated', logfile=logfile)
+    
+        scheduler = getattr(torch.optim.lr_scheduler, config["scheduler"]["scheduler"])(optimizer, **config["scheduler"]["kwargs"])
+        if verbose - 1 > 0: printLog(f'Scheduler {type(scheduler).__name__} is instantiated', logfile=logfile)
+
+        #loss
+        pretrain_criterion = None
+        if model_type == "supervised" and pretrain_config is not None:
+            alpha = np.sum(pretrain_set["target"]) / len(pretrain_set["target"]) #0 or 1
+            weight = torch.tensor([alpha, 1 - alpha]).to(torch.float32).to(device)
+            pretrain_criterion = nn.CrossEntropyLoss(weight=weight)
+
+        train_criterion = None
+        if model_type == "supervised" and train_config is not None:
+            alpha = np.sum(train_set["target"]) / len(train_set["target"]) #0 or 1
+            weight = torch.tensor([alpha, 1 - alpha]).to(torch.float32).to(device)
+            train_criterion = nn.CrossEntropyLoss(weight=weight)
     
         logger = Logger(
             log_type=config["logger"]["log_type"], 
@@ -203,18 +274,6 @@ def do_experiment(config, device="cpu", verbose=0):
             model_description=config["model"]["model_description"],
         #         log_dir = OUTPUT_FOLDER + "logs/"
         )
-    
-        # TESTS
-        model.eval()
-        test_data_point = test_dataset[0][None].to(device)
-        inference_result = model(test_data_point)
-        reconstruct_result = model.reconstruct(test_data_point)
-        encode_result = model.encode(test_data_point)
-        if verbose - 1 > 0: 
-            printLog(f"Test data point shape: {test_data_point.shape}", logfile=logfile)
-            printLog(f"Test inference result length: {len(inference_result)}", logfile=logfile)
-            printLog(f"Test reconstruct shape: {reconstruct_result.shape}", logfile=logfile)
-            printLog(f"Test encode shape: {encode_result.shape}", logfile=logfile)
 
         #NB:Cannot be placed before get_model() since it updates config
         #print whole config
@@ -245,9 +304,10 @@ def do_experiment(config, device="cpu", verbose=0):
         last_ml_model = None
         zero_ml_tag = config["ml_validation"]["ml_eval_function_tag"][0]
 
-        for curr_dataloader, dataset_config in zip(
+        for curr_dataloader, dataset_config, criterion in zip(
             [None if pretrain_config is None else pretrain_dataloader, None if train_config is None else train_dataloader],
-            [pretrain_config, train_config],  
+            [pretrain_config, train_config], 
+            [pretrain_criterion, train_criterion] 
         ):
             if dataset_config is None:
                 continue
@@ -269,12 +329,14 @@ def do_experiment(config, device="cpu", verbose=0):
                     epoch=epoch,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
-                    loss_reduction=config["model"]["loss_reduction"],
+                    loss_reduction=config["model"]["loss_reduction"] if model_type == "unsupervised" else None,
                     is_mask=(config["train"]["masking"]["n_masks"] != 0 and config["train"]["masking"]["mask_ratio"] != 0),
                     mask_ratio=config["train"]["masking"]["mask_ratio"],
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
                     logfile=logfile,
+                    model_type=model_type,
+                    criterion=criterion,
                 )
                 if results == {}: break
                 if verbose > 0: 
@@ -294,18 +356,20 @@ def do_experiment(config, device="cpu", verbose=0):
                     model,
                     device=device,
                     mode="validation",
-                    test_dataset=val_dataset,
-                    targets_test=targets_val,
+                    test_dataset=val_dataset if model_type == "unsupervised" else val_set["chunk"],
+                    targets_test=targets_val if model_type == "unsupervised" else val_set["target"],
                     check_period=config["train"]["validation"]["check_period"] if epoch % config['train']['validation']['check_period_per_epoch'] == 0 else None,
                     plot_period=config["train"]["validation"]["plot_period"] if epoch % config['train']['validation']['plot_period_per_epoch'] == 0 else None,
                     epoch=epoch,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
-                    loss_reduction=config["model"]["loss_reduction"],
+                    loss_reduction=config["model"]["loss_reduction"] if model_type == "unsupervised" else None,
                     step_max=dataset_config["steps"]["step_max"], 
                     verbose=verbose,
                     logfile=logfile,
                     logdir=logdir,
+                    model_type=model_type,
+                    criterion=criterion,
                     **config["ml_validation"],
                 )
                 if results == {}: break
@@ -328,10 +392,10 @@ def do_experiment(config, device="cpu", verbose=0):
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
                 accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.balanced_accuracy'
                 if epoch % config['train']['validation']['check_period_per_epoch'] == 0:
-                    if results[accuracy_tag] > best_clf_accuracy: #metric is computed and classifier is learnt only every n epochs
+                    if results.get(accuracy_tag, 0) > best_clf_accuracy: #metric is computed and classifier is learnt only every n epochs
                         best_clf_accuracy = results[accuracy_tag]
                         best_model = deepcopy(model)
-                        best_ml_model = deepcopy(trained_ml_models[zero_ml_tag])
+                        best_ml_model = deepcopy(trained_ml_models[zero_ml_tag]) if trained_ml_models is not None else None
                         best_epoch = epoch
                         if verbose > 0: printLog(f"New best classifier accuracy = {best_clf_accuracy} on epoch {epoch}", logfile=logfile)
                 
@@ -385,18 +449,20 @@ def do_experiment(config, device="cpu", verbose=0):
                     tested_model,
                     device=device,
                     mode=mode,
-                    test_dataset=test_dataset,
-                    targets_test=targets_test,
+                    test_dataset=test_dataset if model_type == "unsupervised" else test_set["chunk"],
+                    targets_test=targets_test if model_type == "unsupervised" else test_set["target"],
                     check_period=1e10,
                     plot_period=1e10,
                     epoch=train_config["steps"]['end_epoch'] if train_config is not None else 0,
                     logger=logger,
                     loss_coefs=config["train"]["loss_coefs"],
-                    loss_reduction=config["model"]["loss_reduction"],
+                    loss_reduction=config["model"]["loss_reduction"] if model_type == "unsupervised" else None,
                     step_max=train_config["steps"]["step_max"] if train_config is not None else None, 
                     verbose=verbose,
                     logfile=logfile,
                     logdir=logdir,
+                    model_type=model_type,
+                    criterion=train_criterion,
                     **config["ml"],
                 )
                 results_all[mode] = results
@@ -410,7 +476,13 @@ def do_experiment(config, device="cpu", verbose=0):
 
                 if config.get("save_after_test", False):
                     printLog(f"INFO: Saving models after test in {mode} mode.")
-                    logger.save_model(epoch, model=tested_model, model_postfix=f"_{mode}", ml_model=trained_ml_models[zero_ml_tag], ml_model_postfix=f"_{mode}")
+                    logger.save_model(
+                        epoch, 
+                        model=tested_model, 
+                        model_postfix=f"_{mode}", 
+                        ml_model=trained_ml_models[zero_ml_tag] if trained_ml_models is not None else None, 
+                        ml_model_postfix=f"_{mode}"
+                    )
             else:
                 printLog(f"WARNING:{mode} model is None", logfile=logfile)
         
