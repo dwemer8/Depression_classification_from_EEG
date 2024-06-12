@@ -5,7 +5,7 @@ Reimplementation of encoder and decoder from "REPRESENTATION LEARNING FOR IMPROV
 import torch
 import torch.nn as nn
 import typing as t
-from .modules import FlattenLinear, UnflattenLinear
+from .modules import FlattenLazyLinear, UnflattenLazyLinear
 
 class Encoder(nn.Module):
     def __init__(
@@ -16,8 +16,10 @@ class Encoder(nn.Module):
         ],
         activation : str = "ReLU",
         linear_params : t.List[t.Dict] = [
-            {"in_features" : 366, "out_features": 128},
-            {"in_features" : 128, "out_features": 10},
+            # {"in_features" : 366, "out_features": 128},
+            # {"in_features" : 128, "out_features": 10},
+            {"out_features": 128},
+            {"out_features": 10},
         ]
     ):
         super().__init__()
@@ -37,12 +39,12 @@ class Encoder(nn.Module):
             if i != 0:
                 modules.extend([
                     getattr(nn, activation)(),
-                    nn.Linear(**params),
+                    nn.LazyLinear(**params),
                 ])
             else:
                 modules.extend([
                     getattr(nn, activation)(),
-                    FlattenLinear(**params),
+                    FlattenLazyLinear(**params),
                 ])
 
         self.net = nn.Sequential(*modules)
@@ -55,8 +57,10 @@ class Decoder(nn.Module):
         self,
         activation : str = "ReLU",
         linear_params : t.List[t.Dict] = [
-            {"in_features" : 10, "out_features": 128},
-            {"in_features" : 128, "out_features": 366, "penultimate_dim": 6},
+            # {"in_features" : 10, "out_features": 128},
+            # {"in_features" : 128, "out_features": 366, "penultimate_dim": 6},
+            {"out_features": 128},
+            {"out_features": 366, "penultimate_dim": 6},
         ],
         convs_params : t.List[t.Dict] = [
             {"in_channels": 6, "out_channels": 32, "kernel_size": 6, "stride": 2},
@@ -70,11 +74,11 @@ class Decoder(nn.Module):
         for i, params in enumerate(linear_params):
             if i != len(linear_params) - 1:
                 modules.extend([
-                    nn.Linear(**params),
+                    nn.LazyLinear(**params),
                     getattr(nn, activation)(),
                 ])
             else:
-                modules.append(UnflattenLinear(**params))
+                modules.append(UnflattenLazyLinear(**params))
                 if len(convs_params) > 0:
                     modules.append(getattr(nn, activation)())
 

@@ -339,15 +339,15 @@ class ModelsZoo:
             ],
             "activation" : "ReLU",
             "linear_params" : [
-                {"in_features" : 174, "out_features": 128},
-                {"in_features" : 128, "out_features": 10},
+                {"out_features": 128},
+                {"out_features": 10},
             ]
         }
         decoder_config = {
             "activation" : "ReLU",
             "linear_params" : [
-                {"in_features" : 10, "out_features": 128},
-                {"in_features" : 128, "out_features": 174, "penultimate_dim": 6},
+                {"out_features": 128},
+                {"out_features": 174, "penultimate_dim": 6},
             ],
             "convs_params" : [
                 {"in_channels": 6, "out_channels": 32, "kernel_size": 6, "stride": 2},
@@ -389,15 +389,15 @@ class ModelsZoo:
             ],
             "activation" : "ReLU",
             "linear_params" : [
-                {"in_features" : 174, "out_features": 128},
-                {"in_features" : 128, "out_features": 20},
+                {"out_features": 128},
+                {"out_features": 20},
             ]
         }
         decoder_config = {
             "activation" : "ReLU",
             "linear_params" : [
-                {"in_features" : 10, "out_features": 128},
-                {"in_features" : 128, "out_features": 174, "penultimate_dim": 6},
+                {"out_features": 128},
+                {"out_features": 174, "penultimate_dim": 6},
             ],
             "convs_params" : [
                 {"in_channels": 6, "out_channels": 32, "kernel_size": 6, "stride": 2},
