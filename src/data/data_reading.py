@@ -114,25 +114,25 @@ class DataReader:
             reset = {"chunk": [], "target": [], "patient": []}
             train_set, val_set, test_set = deepcopy(reset), deepcopy(reset), deepcopy(reset)
 
-            def f(chunk, verbose=1, prev_chunk_patient_id = ""):
+            def add_chunk_to_dataset(chunk, verbose=1, prev_chunk_patient_id = ""):
                 patient_id = chunk["patient"]
                 was_added = False
                 for data_set, patients in zip([train_set, val_set, test_set], [patients_train, patients_val, patients_test]):
                     if patient_id in patients:
-                        for tag in ["chunk", "target", "patient"]:
-                            data_set[tag].append(chunk[tag])
-                            was_added = True
-                    if verbose and not was_added and patient_id != prev_chunk_patient_id:
-                        print (f"WARNING: Patient data with id {patient_id} wasn't added to any dataset")
+                        for tag in ["chunk", "target", "patient"]: data_set[tag].append(chunk[tag])
+                        was_added = True
+                        break
+                if verbose and not was_added and patient_id != prev_chunk_patient_id:
+                    print (f"WARNING: Patient data with id {patient_id} wasn't added to any dataset")
                 return patient_id
 
             if self.verbose > 0:
                 prev_chunk_patient_id = ""
                 for chunk in tqdm(self.chunks_list):
-                    prev_chunk_patient_id = f(chunk, self.verbose, prev_chunk_patient_id=prev_chunk_patient_id)
+                    prev_chunk_patient_id = add_chunk_to_dataset(chunk, self.verbose, prev_chunk_patient_id=prev_chunk_patient_id)
             else:
                 for chunk in self.chunks_list:
-                    f(chunk, self.verbose)
+                    add_chunk_to_dataset(chunk, self.verbose)
 
             #type conversion
             for data_set in [train_set, val_set, test_set]:

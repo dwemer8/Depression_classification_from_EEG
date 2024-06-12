@@ -3,7 +3,7 @@
     "method": "direct restoration",
     "save_path": "model_weights/",
     "log_path": "logs/",
-    "hash": "0",
+    "hash": "0x883d0fb7",
     "run_hash": "0",
     "run_name": "test",
     "seed": 0,
@@ -17,30 +17,47 @@
         },
         "samples_shape": null,
         "train": {
-            "pretrain": null,
-            "train": {
-                "source": {
-                    "name": "inhouse_dataset",
-                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
-                },
+            "pretrain": {
                 "size": null,
+                "steps": {
+                    "step_max": null,
+                    "end_epoch": 11,
+                    "start_epoch": 1
+                },
+                "source": {
+                    "file": "Data/TUAB/fz_cz_pz/dataset_128_60.0.pkl",
+                    "name": "TUAB"
+                },
                 "n_samples": null,
                 "preprocessing": {
+                    "t_max": null,
                     "is_squeeze": false,
-                    "is_unsqueeze": false,
-                    "t_max": null
-                },
+                    "is_unsqueeze": false
+                }
+            },
+            "train": {
+                "size": null,
                 "steps": {
-                    "start_epoch": 1,
-                    "end_epoch": 101,
-                    "step_max": null
+                    "step_max": null,
+                    "end_epoch": 86,
+                    "start_epoch": 11
+                },
+                "source": {
+                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl",
+                    "name": "inhouse_dataset"
+                },
+                "n_samples": null,
+                "preprocessing": {
+                    "t_max": null,
+                    "is_squeeze": false,
+                    "is_unsqueeze": false
                 }
             }
         },
         "val": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl"
             },
             "size": 30,
             "n_samples": null,
@@ -53,7 +70,7 @@
         "test": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl"
             },
             "size": 30,
             "n_samples": null,
@@ -65,9 +82,20 @@
         }
     },
     "model": {
-        "model": "ellis_sattiraju_2023_10385424",
-        "model_description": "ellis_sattiraju_2023_10385424",
-        "type": "supervised"
+        "type": "unsupervised",
+        "beta": 2,
+        "model": "VAE_deep",
+        "input_dim": [
+            3,
+            7680
+        ],
+        "n_classes": 3,
+        "latent_dim": 30720,
+        "latent_std": 1,
+        "n_channels": 3,
+        "loss_reduction": "mean",
+        "model_description": "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
+        "first_decoder_conv_depth": 32
     },
     "optimizer": {
         "optimizer": "AdamW",
@@ -107,7 +135,7 @@
         }
     },
     "ml": {
-        "avg_embeddings_over_time": false,
+        "avg_embeddings_over_time": true,
         "plot_type": "classification",
         "ml_model": {
             "scaler": "preprocessing.StandardScaler",
@@ -134,7 +162,7 @@
             ]
         },
         "ml_eval_function": [
-            "evaluateDeepClassifier"
+            "evaluateClassifier"
         ],
         "ml_eval_function_tag": [
             "d"
@@ -142,6 +170,13 @@
         "ml_eval_function_kwargs": [
             {
                 "verbose": 10,
+                "test_size": 0.33,
+                "seed": "{SEED}",
+                "evaluate_on_train": false,
+                "cv_scorer": [
+                    "average_precision_score",
+                    "soft"
+                ],
                 "metrics": [
                     [
                         "balanced_accuracy_score",
@@ -208,7 +243,7 @@
         "ml_metric_prefix": "clf"
     },
     "ml_validation": {
-        "avg_embeddings_over_time": false,
+        "avg_embeddings_over_time": true,
         "plot_type": "classification",
         "ml_model": {
             "scaler": "preprocessing.StandardScaler",
@@ -233,19 +268,30 @@
             ]
         },
         "ml_eval_function": [
-            "evaluateDeepClassifier"
+            "evaluateClassifier"
         ],
         "ml_eval_function_tag": [
             "d"
         ],
         "ml_eval_function_kwargs": [
             {
-                "verbose": 0,
+                "verbose": 10,
+                "test_size": 0.33,
+                "seed": "{SEED}",
+                "evaluate_on_train": false,
+                "cv_scorer": [
+                    "average_precision_score",
+                    "soft"
+                ],
                 "metrics": [],
                 "metrics_for_CI": [
                     [
                         "balanced_accuracy_score",
                         "hard"
+                    ],
+                    [
+                        "average_precision_score",
+                        "soft"
                     ]
                 ],
                 "n_bootstraps": 100

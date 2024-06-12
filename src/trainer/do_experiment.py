@@ -382,7 +382,7 @@ def do_experiment(config, device="cpu", verbose=0):
         
                 scheduler.step(results['loss'])
 
-                if results['loss'] < best_loss: #validation loss from results is here 
+                if results['loss'] < best_loss and dataset_config == train_config: #validation loss from results is here 
                     best_loss = results['loss']
                     final_model = deepcopy(model)
                     final_ml_model = deepcopy(trained_ml_models[zero_ml_tag]) if trained_ml_models is not None else None
@@ -391,7 +391,7 @@ def do_experiment(config, device="cpu", verbose=0):
 
                 last_tag = "cv" if zero_ml_tag == "cv" else "bs"
                 accuracy_tag = f'clf.{zero_ml_tag}.test.{last_tag}.balanced_accuracy'
-                if epoch % config['train']['validation']['check_period_per_epoch'] == 0:
+                if epoch % config['train']['validation']['check_period_per_epoch'] == 0 and dataset_config == train_config:
                     if results.get(accuracy_tag, 0) > best_clf_accuracy: #metric is computed and classifier is learnt only every n epochs
                         best_clf_accuracy = results[accuracy_tag]
                         best_model = deepcopy(model)
@@ -434,13 +434,18 @@ def do_experiment(config, device="cpu", verbose=0):
         ):
             if verbose > 0: printLog(f"##### Testing in {mode} mode... #####", logfile=logfile)
             if tested_model is not None:
-                if tested_ml_model is not None:
+                if tested_ml_model is not None and config["ml"]["ml_to_train"] == False:
                     printLog(f"INFO:{mode}_ml_model present: {tested_ml_model}", logfile=logfile)
                     config["ml"]["ml_model"] = tested_ml_model
                     config["ml"]["ml_to_train"] = False
 
+                elif tested_ml_model is not None and config["ml"]["ml_to_train"] == True:
+                    printLog(f"WARNING:{mode}_ml_model present, but ml_to_train==True, new {mode}_ml_model will be trained on test dataset!", logfile=logfile)
+                    config["ml"]["ml_model"] = not_trained_ml_model #is needed in case if we changed model on previous step, but on this we have None
+                    config["ml"]["ml_to_train"] = True
+
                 else:
-                    printLog(f"INFO:{mode}_ml_model is None, ml model {not_trained_ml_model} is loaded from config and will be trained", logfile=logfile)
+                    printLog(f"INFO:{mode}_ml_model is None, raw ml model {not_trained_ml_model} is loaded from config and will be trained on test dataset!", logfile=logfile)
                     config["ml"]["ml_model"] = not_trained_ml_model #is needed in case if we changed model on previous step, but on this we have None
                     config["ml"]["ml_to_train"] = True
 
@@ -476,12 +481,13 @@ def do_experiment(config, device="cpu", verbose=0):
 
                 if config.get("save_after_test", False):
                     printLog(f"INFO: Saving models after test in {mode} mode.")
+                    is_retrained = config["ml"]["ml_to_train"]
                     logger.save_model(
                         epoch, 
                         model=tested_model, 
-                        model_postfix=f"_{mode}", 
+                        model_postfix=f"_{mode}_", 
                         ml_model=trained_ml_models[zero_ml_tag] if trained_ml_models is not None else None, 
-                        ml_model_postfix=f"_{mode}"
+                        ml_model_postfix=f"_{mode}_{'' if is_retrained else 'not_'}retrained_" #run_hash will be added after postfix 
                     )
             else:
                 printLog(f"WARNING:{mode} model is None", logfile=logfile)

@@ -116,9 +116,9 @@ default_config = {
     "method": "direct restoration",
     "save_path" : OUTPUT_FOLDER + 'model_weights/',
     "log_path" : OUTPUT_FOLDER + "logs/",
-    "hash": "0", #will be replaced further 
+    "hash": hex(random.getrandbits(32)), #will be replaced further 
     "run_hash": "0", #will be replaced further 
-    "run_name": "test", #will be replaced further 
+    "run_name": "test", #"test", #will be replaced further 
     "seed": 0, #will be replaced further 
     "n_seeds": 3, #no more than length of FIXED_SEEDS from utils
     "display_mode": "terminal", #ipynb/terminal
@@ -142,45 +142,134 @@ with open("configs/default_config.json", "w") as f: json.dump(default_config, f,
 
 # experiments = [default_config]
 experiments = []
-for pretrain_config in [
-    # None,
+
+for model_config in [
     {
-        "source":{
-            "name": "TUAB", #inhouse_dataset/depression_anonymized/TUAB
-            "file": f"{TUAB_DIRECTORY}fz_cz_pz/dataset_128_1.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
+        "type": "unsupervised",
+        "beta": 2,
+        "model": "VAE_deep",
+        "input_dim": [
+            3,
+            7680
+        ],
+        "n_classes": 3,
+        "latent_dim": 30720,
+        "latent_std": 1,
+        "n_channels": 3,
+        "loss_reduction": "mean",
+        "model_description": "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
+        "first_decoder_conv_depth": 32
+    },
+    {
+        "type": "unsupervised",
+        "model": "AE_parametrized",
+        "decoder": {
+            "in_conv_config": {
+                "n_convs": 2,
+                "activation": "Sigmoid",
+                "in_channels": 24,
+                "kernel_size": 3,
+                "out_channels": 24
+            },
+            "up_blocks_config": [
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 24,
+                    "kernel_size": 3,
+                    "out_channels": 12
+                },
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 12,
+                    "kernel_size": 3,
+                    "out_channels": 6
+                },
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 6,
+                    "kernel_size": 1,
+                    "out_channels": 3
+                }
+            ]
         },
-        "size": None,
-        "n_samples": None, #will be updated in train function,
-        "preprocessing":{
-            "is_squeeze": False, 
-            "is_unsqueeze": False, 
-            "t_max": None
+        "encoder": {
+            "out_conv_config": {
+                "n_convs": 2,
+                "activation": "Sigmoid",
+                "in_channels": 24,
+                "kernel_size": 3,
+                "out_channels": 24
+            },
+            "down_blocks_config": [
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 3,
+                    "kernel_size": 7,
+                    "out_channels": 6
+                },
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 6,
+                    "kernel_size": 7,
+                    "out_channels": 12
+                },
+                {
+                    "n_convs": 2,
+                    "activation": "Sigmoid",
+                    "in_channels": 12,
+                    "kernel_size": 5,
+                    "out_channels": 24
+                }
+            ]
         },
-        "steps": {
-            "start_epoch": 1, # including #!!CHECK
-            "end_epoch": 6, # excluding, #!!CHECK
-            "step_max" : None #!!CHECK
-        }
+        "framework": {
+            "loss_reduction": "mean",
+            "first_decoder_conv_depth": 24
+        },
+        "loss_reduction": "mean",
+        "model_description": "60 s, AE"
     }
 ]:
-    hash = hex(random.getrandbits(32))
-    default_config.update({"hash": hash})
-    dc = Config(default_config)
-    for beta in [0.075, 1.0]:
-        cc = dc.upd({
-            "run_name": f"{'' if pretrain_config is None else 'pretrain, '}beta_{beta}, bVAE_honke_higgins_2010_15274",
-            "model": {
-                "framework": {
-                    "beta" : beta
-                }
+    for pretrain_config in [
+        None,
+        {
+            "source":{
+                "name": "TUAB", #inhouse_dataset/depression_anonymized/TUAB
+                "file": f"{TUAB_DIRECTORY}fz_cz_pz/dataset_128_60.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
             },
+            "size": None,
+            "n_samples": None, #will be updated in train function,
+            "preprocessing":{
+                "is_squeeze": False, 
+                "is_unsqueeze": False, 
+                "t_max": None
+            },
+            "steps": {
+                "start_epoch": 1, # including #!!CHECK
+                "end_epoch": 6, # excluding, #!!CHECK
+                "step_max" : None #!!CHECK
+            }
+        }
+    ]:
+        hash = hex(random.getrandbits(32))
+        default_config.update({"hash": hash})
+        dc = Config(default_config)
+        model_desription = "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid" if model_config["model"] == "VAE_deep" else "60 s, AE, 3 ch., 6/12/24/24, 7/7/5/3/3/3/3/1, Sigmoid"
+        cc = dc.upd({
+            "run_name": f"10-pct, {'' if pretrain_config is None else 'finetune, '}, {model_desription}",
+            "model": model_config,
             "dataset" : {
                 "train": {
                     "pretrain": pretrain_config,
                     "train" : {
                         "steps": {
                             "start_epoch": 1 if pretrain_config is None else 6, # including #!!CHECK
-                            "end_epoch": 101 if pretrain_config is None else 106, # excluding, #!!CHECK
+                            "end_epoch": 76 if pretrain_config is None else 81, # excluding, #!!CHECK
                         }
                     }
                 }

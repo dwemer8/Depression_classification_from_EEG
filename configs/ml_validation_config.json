@@ -1,5 +1,5 @@
 {
-    "avg_embeddings_over_time": false,
+    "avg_embeddings_over_time": true,
     "plot_type": "classification", #"regression"/"classification"
     "ml_model": {
         "scaler" : "preprocessing.StandardScaler",
@@ -42,9 +42,9 @@
             "test_size" : 0.33,
             "seed" : {SEED},
             "evaluate_on_train": false,
-            "cv_scorer" : ["balanced_accuracy_score", "hard"],
+            "cv_scorer" : ["average_precision_score", "soft"],
             "metrics" : [],
-            "metrics_for_CI": [["balanced_accuracy_score", "hard"]],
+            "metrics_for_CI": [["balanced_accuracy_score", "hard"], ["average_precision_score", "soft"]],
             "n_bootstraps" : 100 #!!CHECK
         }
     ],
