@@ -3,9 +3,9 @@
     "method": "direct restoration",
     "save_path": "model_weights/",
     "log_path": "logs/",
-    "hash": "0x883d0fb7",
+    "hash": "0x9fa0cc4",
     "run_hash": "0",
-    "run_name": "test",
+    "run_name": "ellis_sattiraju_2023_10385424",
     "seed": 0,
     "n_seeds": 3,
     "display_mode": "terminal",
@@ -17,30 +17,13 @@
         },
         "samples_shape": null,
         "train": {
-            "pretrain": {
-                "size": null,
-                "steps": {
-                    "step_max": null,
-                    "end_epoch": 11,
-                    "start_epoch": 1
-                },
-                "source": {
-                    "file": "Data/TUAB/fz_cz_pz/dataset_128_60.0.pkl",
-                    "name": "TUAB"
-                },
-                "n_samples": null,
-                "preprocessing": {
-                    "t_max": null,
-                    "is_squeeze": false,
-                    "is_unsqueeze": false
-                }
-            },
+            "pretrain": null,
             "train": {
                 "size": null,
                 "steps": {
                     "step_max": null,
-                    "end_epoch": 86,
-                    "start_epoch": 11
+                    "end_epoch": 101,
+                    "start_epoch": 1
                 },
                 "source": {
                     "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl",
@@ -81,22 +64,7 @@
             }
         }
     },
-    "model": {
-        "type": "unsupervised",
-        "beta": 2,
-        "model": "VAE_deep",
-        "input_dim": [
-            3,
-            7680
-        ],
-        "n_classes": 3,
-        "latent_dim": 30720,
-        "latent_std": 1,
-        "n_channels": 3,
-        "loss_reduction": "mean",
-        "model_description": "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
-        "first_decoder_conv_depth": 32
-    },
+    "model": {},
     "optimizer": {
         "optimizer": "AdamW",
         "kwargs": {
@@ -141,7 +109,7 @@
             "scaler": "preprocessing.StandardScaler",
             "clf": "svm.SVC"
         },
-        "ml_to_train": true,
+        "ml_to_train": false,
         "ml_param_grid": {
             "clf__C": [
                 0.1,

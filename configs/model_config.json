@@ -6,19 +6,4 @@
     #"model": "bVAE_honke_higgins_2010_15274",
     #"model_description": "bVAE_honke_higgins_2010_15274",
     #"type": "unsupervised"
-
-    "type": "unsupervised",
-    "beta": 2,
-    "model": "VAE_deep",
-    "input_dim": [
-        3,
-        7680
-    ],
-    "n_classes": 3,
-    "latent_dim": 30720,
-    "latent_std": 1,
-    "n_channels": 3,
-    "loss_reduction": "mean",
-    "model_description": "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
-    "first_decoder_conv_depth": 32
 }

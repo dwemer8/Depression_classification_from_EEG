@@ -23,9 +23,10 @@
             "verbose" : 10,
             "test_size" : 0.33,
             "seed" : {SEED},
-            "cv_scorer" : "accuracy_score",
+            "cv_scorer" : ["average_precision_score", "soft"],
             "metrics_for_CI": [["average_precision_score", "soft"]], #["roc_auc_score", "soft"], ["accuracy_score", "hard"], ["f1_score", "hard"]],
-            "n_bootstraps" : 1000 #!!CHECK
+            "n_bootstraps" : 1000, #!!CHECK,
+            "evaluate_on_train": false
         }
     ],
     "ml_metric_prefix" : "clf"

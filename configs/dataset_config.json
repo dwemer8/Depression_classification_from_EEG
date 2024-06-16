@@ -5,30 +5,31 @@
     },
     "samples_shape": null, #will be updated in train function
     "train": {
-        "pretrain": {
-            "size": null,
-            "steps": {
-                "step_max": null,
-                "end_epoch": 11,
-                "start_epoch": 1
-            },
-            "source": {
-                "file": "{TUAB_DIRECTORY}fz_cz_pz/dataset_128_60.0.pkl",
-                "name": "TUAB"
-            },
-            "n_samples": null,
-            "preprocessing": {
-                "t_max": null,
-                "is_squeeze": false,
-                "is_unsqueeze": false
-            }
-        },
+        "pretrain": null,
+        # "pretrain": {
+            #     "size": null,
+            #     "steps": {
+            #         "step_max": null,
+            #         "end_epoch": 11,
+            #         "start_epoch": 1
+            #     },
+            #     "source": {
+            #         "file": "{TUAB_DIRECTORY}fz_cz_pz/dataset_128_60.0.pkl",
+            #         "name": "TUAB"
+            #     },
+            #     "n_samples": null,
+            #     "preprocessing": {
+            #         "t_max": null,
+            #         "is_squeeze": false,
+            #         "is_unsqueeze": false
+            #     }
+        # },
         "train": {
             "size": null,
             "steps": {
                 "step_max": null,
-                "end_epoch": 86,
-                "start_epoch": 11
+                "end_epoch": 101,
+                "start_epoch": 1
             },
             "source": {
                 "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_60.0_6.0.pkl",

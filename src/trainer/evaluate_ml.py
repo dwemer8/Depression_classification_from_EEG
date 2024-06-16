@@ -58,7 +58,7 @@ def evaluate_ml(
         if verbose - 2 > 0: print("Embeddings shape:", X.shape)
         results = {}
         for func, kwargs, tag in zip(ml_eval_function, ml_eval_function_kwargs, ml_eval_function_tag):
-            results[tag] = func(X, y, ml_model, ml_param_grid, **kwargs)
+            _, results[tag] = func(X, y, ml_model, ml_param_grid, **kwargs)
 
         end_evaluation_time = time.time()
         if verbose - 2 > 0: print(f"Evaluation time: {end_evaluation_time - start_evaluation_time} s")

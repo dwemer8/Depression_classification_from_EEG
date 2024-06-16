@@ -244,7 +244,8 @@ def get_bootstrap_classifier_values(
     metrics_for_CI = [], #[(average_precision_score, "soft"), (roc_auc_score, "soft"), (accuracy_score, "hard"), (f1_score, "hard")],
     n_bootstraps = 1000,
     logfile=None,
-    to_train=True
+    to_train=True,
+    evaluate_on_train=False,
 ):
     def evaluate(clf, X, y, metrics_for_CI=metrics_for_CI):        
         y_proba = clf.predict_proba(X)[:, 1]
@@ -283,11 +284,13 @@ def get_bootstrap_classifier_values(
     else:
         clf = model
 
-    if verbose > 0: printLog(f"Evaluation on the train data of shape {X_train.shape}...", logfile=logfile)
-    estimates_train = evaluate(clf.best_estimator_, X_train, y_train)
+    estimates_train = {}
+    if evaluate_on_train:
+        if verbose > 0: printLog(f"Evaluation on the train data of shape {X_train.shape}...", logfile=logfile)
+        estimates_train = evaluate(clf, X_train, y_train)
     
     if verbose > 0: printLog(f"Evaluation on the test data of shape {X_test.shape}...", logfile=logfile)
-    estimates_test = evaluate(clf.best_estimator_, X_test, y_test)
+    estimates_test = evaluate(clf, X_test, y_test)
     
     return clf, {
         "train": estimates_train,

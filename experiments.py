@@ -118,7 +118,7 @@ default_config = {
     "log_path" : OUTPUT_FOLDER + "logs/",
     "hash": hex(random.getrandbits(32)), #will be replaced further 
     "run_hash": "0", #will be replaced further 
-    "run_name": "test", #"test", #will be replaced further 
+    "run_name": "ellis_sattiraju_2023_10385424", #"test", #will be replaced further 
     "seed": 0, #will be replaced further 
     "n_seeds": 3, #no more than length of FIXED_SEEDS from utils
     "display_mode": "terminal", #ipynb/terminal
@@ -140,13 +140,13 @@ with open("configs/default_config.json", "w") as f: json.dump(default_config, f,
 # Define experiments
 '''
 
-# experiments = [default_config]
-experiments = []
+experiments = [default_config]
 
+experiments = []
 for model_config in [
     {
-        "type": "unsupervised",
         "beta": 2,
+        "type": "unsupervised",
         "model": "VAE_deep",
         "input_dim": [
             3,
@@ -232,48 +232,27 @@ for model_config in [
             "first_decoder_conv_depth": 24
         },
         "loss_reduction": "mean",
-        "model_description": "60 s, AE"
+        "model_description": "60 s, AE, 3 ch., 6/12/24/24, 7/7/5/3/3/3/3/1, Sigmoid"
     }
 ]:
-    for pretrain_config in [
-        None,
-        {
-            "source":{
-                "name": "TUAB", #inhouse_dataset/depression_anonymized/TUAB
-                "file": f"{TUAB_DIRECTORY}fz_cz_pz/dataset_128_60.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl",
-            },
-            "size": None,
-            "n_samples": None, #will be updated in train function,
-            "preprocessing":{
-                "is_squeeze": False, 
-                "is_unsqueeze": False, 
-                "t_max": None
-            },
-            "steps": {
-                "start_epoch": 1, # including #!!CHECK
-                "end_epoch": 6, # excluding, #!!CHECK
-                "step_max" : None #!!CHECK
-            }
-        }
+    for coeffs in [
+        {"ampl": 1, "vel": 0, "acc": 0, "frq": 0, "kl": 1},
+        {"ampl": 0, "vel": 1, "acc": 0, "frq": 0, "kl": 1},
+        {"ampl": 0, "vel": 0, "acc": 1, "frq": 0, "kl": 1},
+        {"ampl": 0, "vel": 0, "acc": 0, "frq": 1, "kl": 1},
+        {"ampl": 1, "vel": 1, "acc": 1, "frq": 1, "kl": 1},
     ]:
         hash = hex(random.getrandbits(32))
         default_config.update({"hash": hash})
         dc = Config(default_config)
-        model_desription = "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid" if model_config["model"] == "VAE_deep" else "60 s, AE, 3 ch., 6/12/24/24, 7/7/5/3/3/3/3/1, Sigmoid"
+        model_desription = model_config["model_description"]
+        coefs_tag = "_".join([k for k, v in coeffs.items() if v == 1])
         cc = dc.upd({
-            "run_name": f"10-pct, {'' if pretrain_config is None else 'finetune, '}, {model_desription}",
+            "run_name": f"coeffs {coefs_tag}, {model_desription}",
             "model": model_config,
-            "dataset" : {
-                "train": {
-                    "pretrain": pretrain_config,
-                    "train" : {
-                        "steps": {
-                            "start_epoch": 1 if pretrain_config is None else 6, # including #!!CHECK
-                            "end_epoch": 76 if pretrain_config is None else 81, # excluding, #!!CHECK
-                        }
-                    }
-                }
-            },
+            "train": {
+                "loss_coefs": coeffs
+            }
         })
         experiments.append(cc)
 

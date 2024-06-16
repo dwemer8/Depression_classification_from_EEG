@@ -158,14 +158,18 @@
                 "verbose": 10,
                 "test_size": 0.33,
                 "seed": 0,
-                "cv_scorer": "accuracy_score",
+                "cv_scorer": [
+                    "average_precision_score",
+                    "soft"
+                ],
                 "metrics_for_CI": [
                     [
                         "average_precision_score",
                         "soft"
                     ]
                 ],
-                "n_bootstraps": 1000
+                "n_bootstraps": 1000,
+                "evaluate_on_train": false
             }
         ],
         "ml_metric_prefix": "clf"
