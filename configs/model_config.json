@@ -6,4 +6,8 @@
     #"model": "bVAE_honke_higgins_2010_15274",
     #"model_description": "bVAE_honke_higgins_2010_15274",
     #"type": "unsupervised"
+
+    "model": "sandheep_vineeth_2019_8929254",
+    "model_description": "sandheep_vineeth_2019_8929254",
+    "type": "supervised"
 }

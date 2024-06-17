@@ -118,7 +118,7 @@ default_config = {
     "log_path" : OUTPUT_FOLDER + "logs/",
     "hash": hex(random.getrandbits(32)), #will be replaced further 
     "run_hash": "0", #will be replaced further 
-    "run_name": "ellis_sattiraju_2023_10385424", #"test", #will be replaced further 
+    "run_name": "sandheep_vineeth_2019_8929254", #"test", #will be replaced further 
     "seed": 0, #will be replaced further 
     "n_seeds": 3, #no more than length of FIXED_SEEDS from utils
     "display_mode": "terminal", #ipynb/terminal
@@ -143,118 +143,34 @@ with open("configs/default_config.json", "w") as f: json.dump(default_config, f,
 experiments = [default_config]
 
 experiments = []
-for model_config in [
-    {
-        "beta": 2,
-        "type": "unsupervised",
-        "model": "VAE_deep",
-        "input_dim": [
-            3,
-            7680
-        ],
-        "n_classes": 3,
-        "latent_dim": 30720,
-        "latent_std": 1,
-        "n_channels": 3,
-        "loss_reduction": "mean",
-        "model_description": "60 s, beta-VAE, 3 ch., 4/8/16/32, 7/7/5/3/3/3/3/1, Sigmoid",
-        "first_decoder_conv_depth": 32
-    },
-    {
-        "type": "unsupervised",
-        "model": "AE_parametrized",
-        "decoder": {
-            "in_conv_config": {
-                "n_convs": 2,
-                "activation": "Sigmoid",
-                "in_channels": 24,
-                "kernel_size": 3,
-                "out_channels": 24
-            },
-            "up_blocks_config": [
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 24,
-                    "kernel_size": 3,
-                    "out_channels": 12
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 12,
-                    "kernel_size": 3,
-                    "out_channels": 6
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 6,
-                    "kernel_size": 1,
-                    "out_channels": 3
-                }
-            ]
-        },
-        "encoder": {
-            "out_conv_config": {
-                "n_convs": 2,
-                "activation": "Sigmoid",
-                "in_channels": 24,
-                "kernel_size": 3,
-                "out_channels": 24
-            },
-            "down_blocks_config": [
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 3,
-                    "kernel_size": 7,
-                    "out_channels": 6
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 6,
-                    "kernel_size": 7,
-                    "out_channels": 12
-                },
-                {
-                    "n_convs": 2,
-                    "activation": "Sigmoid",
-                    "in_channels": 12,
-                    "kernel_size": 5,
-                    "out_channels": 24
-                }
-            ]
-        },
-        "framework": {
-            "loss_reduction": "mean",
-            "first_decoder_conv_depth": 24
-        },
-        "loss_reduction": "mean",
-        "model_description": "60 s, AE, 3 ch., 6/12/24/24, 7/7/5/3/3/3/3/1, Sigmoid"
-    }
-]:
-    for coeffs in [
-        {"ampl": 1, "vel": 0, "acc": 0, "frq": 0, "kl": 1},
-        {"ampl": 0, "vel": 1, "acc": 0, "frq": 0, "kl": 1},
-        {"ampl": 0, "vel": 0, "acc": 1, "frq": 0, "kl": 1},
-        {"ampl": 0, "vel": 0, "acc": 0, "frq": 1, "kl": 1},
-        {"ampl": 1, "vel": 1, "acc": 1, "frq": 1, "kl": 1},
-    ]:
-        hash = hex(random.getrandbits(32))
-        default_config.update({"hash": hash})
-        dc = Config(default_config)
-        model_desription = model_config["model_description"]
-        coefs_tag = "_".join([k for k, v in coeffs.items() if v == 1])
-        cc = dc.upd({
-            "run_name": f"coeffs {coefs_tag}, {model_desription}",
-            "model": model_config,
+for electrode in ["fp1", "fp2"]:
+    hash = hex(random.getrandbits(32))
+    default_config.update({"hash": hash})
+    dc = Config(default_config)
+
+    cc = dc.upd({
+        "run_name": electrode + "_" + default_config["run_name"],
+        "dataset":{
             "train": {
-                "loss_coefs": coeffs
-            }
-        })
-        experiments.append(cc)
+                "train": {
+                    "source": {
+                        "file": f"{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_{electrode}/dataset_256_2.7.pkl"
+                    }
+                }
+            },
+            "val" : {
+                "source": {
+                    "file": f"{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_{electrode}/dataset_256_2.7.pkl"
+                }
+            },
+            "test" : {
+                "source": {
+                    "file": f"{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_{electrode}/dataset_256_2.7.pkl"
+                }
+            },
+        }
+    })
+    experiments.append(cc)
 
 print("N experiments:", len(experiments))
 for exp in experiments:

@@ -32,41 +32,44 @@
                 "start_epoch": 1
             },
             "source": {
-                "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_60.0_6.0.pkl",
+                "file": "{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl",
                 "name": "inhouse_dataset"
             },
             "n_samples": null,
             "preprocessing": {
                 "t_max": null,
                 "is_squeeze": false,
-                "is_unsqueeze": false
+                "is_unsqueeze": false,
+                "min_max_scaling": false
             }
         }
     },
     "val": {
         "source":{
             "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
-            "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_60.0_6.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
+            "file": "{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
         },
         "size": 30, #n_patients
         "n_samples": null, #will be updated in train function
         "preprocessing":{
             "is_squeeze": false,
             "is_unsqueeze": false,
-            "t_max": null
+            "t_max": null,
+            "min_max_scaling": false
         }
     },
     "test": {
         "source":{
             "name": "inhouse_dataset", #inhouse_dataset/depression_anonymized/TUAB
-            "file": "{INHOUSE_DIRECTORY}fz_cz_pz/dataset_128_60.0_6.0.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
+            "file": "{INHOUSE_DIRECTORY}sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl" #TUAB_DIRECTORY + "dataset_128_1.0.pkl"
         },
         "size": 30, #n_patients
         "n_samples": null, #will be updated in train function
         "preprocessing":{
             "is_squeeze": false,
             "is_unsqueeze": false,
-            "t_max": null
+            "t_max": null,
+            "min_max_scaling": false
         }
     }
 }

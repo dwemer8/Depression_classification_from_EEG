@@ -15,11 +15,15 @@ AMPLITUDE_THRESHOLD = 0.005 #V
 STD_THRESHOLD = 5
 TRANSIENT_STD_THRESHOLD = 3
 
-def save_preprocessed_data(chunks_list, file):
+def save_preprocessed_data(chunks_list, file, dir=None):
+    if dir is not None:
+        os.makedirs(dir, exist_ok=True)
+        file = os.path.join(dir, file)
+
     with open(file, "wb") as f:
         pickle.dump(chunks_list, f)
 
-def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=None):
+def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=None, std_threshold=5, is_normalize_each_chunk=False):
     chunks = []
     start_idx = 0
     end_idx = start_idx + n_samples_per_chunk
@@ -29,6 +33,7 @@ def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=No
         if n_chunks_max is not None and len(chunks) >= n_chunks_max:
             break
         
+        #taking chunk
         chunk = df.iloc[start_idx:end_idx]
         if len(chunk) != n_samples_per_chunk:
             print(f"WARNING: chunk shape = {chunk.shape}")
@@ -36,11 +41,14 @@ def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=No
             end_idx += step
             continue
 
+        #filtrations
+
         #std = 5 threshold
-        if chunk[ch_names].to_numpy().std() >= 5:
-            start_idx += step 
-            end_idx += step
-            continue
+        if std_threshold is not None:
+            if chunk[ch_names].to_numpy().std() >= std_threshold:
+                start_idx += step 
+                end_idx += step
+                continue
 
         # std t, t+1 threshold
         # drop = False
@@ -54,6 +62,11 @@ def pickChunks(df, ch_names, n_samples_per_chunk=128, n_chunks_max=None, step=No
         #         break
         # if drop:
         #     continue
+
+        #preprocessing
+
+        if is_normalize_each_chunk:
+            chunk.loc[:, ch_names] = (chunk[ch_names] - chunk[ch_names].mean())/chunk[ch_names].std()
 
         chunks.append(chunk)
         start_idx += step 
@@ -69,6 +82,8 @@ def processPatientData(
     target_freq = 125,
     divider = 1e6,
     amplitude_threshold = AMPLITUDE_THRESHOLD,
+    is_normalize_each_channel=True,
+    is_average_reference=True,
     **kwargs
 ):
     '''
@@ -84,21 +99,27 @@ def processPatientData(
     It returns array of chunks in pd.DataFrame format. Perform preprocessing over all channels.
     '''
     
+    #picking channels
     ch_names = df.columns.to_list()[1:] #delete 'time' #['t6', 't4', 'o1', 'f8', 'p4', 'c4', 't3', 'f7', 'f3', 'o2', 'f4', 'c3', 'p3', 't5', 'cz', 'fp1', 'fp2', 'pz', 'fz']
     ch_types = ['eeg'] * len(ch_names)
     info = mne.create_info(ch_names, ch_types=ch_types, sfreq=source_freq)
     raw = mne.io.RawArray(df[ch_names].to_numpy(copy=True).T / divider, info, verbose=False) #data in microvolts
 
-    #average reference, filtration
-    raw, _ = mne.set_eeg_reference(raw, ref_channels='average', verbose=False) #average reference
-    raw.filter(l_freq=l_freq, h_freq=h_freq, method='iir', verbose=False) #filtration
-    raw = raw.resample(target_freq, npad='auto')
+    #average reference, filtration, resampling
+    if is_average_reference:
+        raw, _ = mne.set_eeg_reference(raw, ref_channels='average', verbose=False) #average reference
+    if l_freq is not None or h_freq is not None:
+        raw.filter(l_freq=l_freq, h_freq=h_freq, method='iir', verbose=False) #filtration
+    if target_freq != source_freq:
+        raw = raw.resample(target_freq, npad='auto')
     
     df = raw.to_data_frame() #in microvolts
     #clipping
-    df.loc[:, ch_names].clip(-amplitude_threshold, amplitude_threshold, inplace=True)
+    if amplitude_threshold is not None:
+        df.loc[:, ch_names].clip(-amplitude_threshold, amplitude_threshold, inplace=True)
     #normalization
-    df.loc[:, ch_names] = (df[ch_names] - df[ch_names].mean())/df[ch_names].std()
+    if is_normalize_each_channel:
+        df.loc[:, ch_names] = (df[ch_names] - df[ch_names].mean())/df[ch_names].std()
 
     return pickChunks(df, ch_names, **kwargs)
 
@@ -153,6 +174,7 @@ def preprocessInhouseDatasetData(
     data_epoch_descr["fn"] = data_epoch_descr["fn"].map(lambda x: x.split("/")[-1]) #remove dir from filenames
 
     #read data from MMD and Healthy dirs
+    print("Reading data to dataframes...")
     dirs = [os.path.join(directory, x) for x in data_folders] 
     data_epoch_list = readDataExt_mul(dirs, is_list=True)
 
@@ -162,8 +184,16 @@ def preprocessInhouseDatasetData(
     data_epoch_list = data_epoch_list_
 
     #divide dfs to chunks
+    print("Data preprocessing...")
     chunks_list = []
-    for df in tqdm(data_epoch_list):
+    for df in data_epoch_list:
+        patient = df["file_name"].iloc[0]
+        patient_duration = len(df)
+        source_freq = kwargs["source_freq"]
+        target_freq = kwargs["target_freq"]
+        n_samples_per_chunk = kwargs["n_samples_per_chunk"]
+        n_chunks_from_patient = patient_duration/source_freq*target_freq/n_samples_per_chunk
+
         chunks_from_patient = processPatientData(df.drop(['file_name', "Unnamed: 0"], axis=1), **kwargs)
         file_mask = data_epoch_descr["fn"] == df['file_name'].iloc[0]
         target = data_epoch_descr[file_mask].iloc[0]['target']
@@ -175,6 +205,9 @@ def preprocessInhouseDatasetData(
                 "target": target,
                 "patient": df['file_name'].iloc[0]
             })
+
+
+        print(f"{len(chunks_from_patient)} chunks was obtained from patient {patient}, {n_chunks_from_patient:.1f} expected")
     
     print("\nChunks shape:", chunks_list[0]["chunk"].shape, "length:", len(chunks_list))
     return chunks_list

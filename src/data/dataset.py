@@ -3,11 +3,12 @@ import torch
 from torch.utils.data import Dataset
 
 class InMemoryUnsupervisedDataset(Dataset):
-    def __init__(self, source, transforms=None, t_max=None, is_squeeze=False, is_unsqueeze=False):
+    def __init__(self, source, transforms=None, t_max=None, is_squeeze=False, is_unsqueeze=False, min_max_scaling=True):
         self.transforms = transforms
         self.t_max = t_max
         self.is_squeeze = is_squeeze
         self.is_unsqueeze = is_unsqueeze
+        self.min_max_scaling = min_max_scaling
 
         if type(source) == type(str()):
             self.samples = np.load(source)
@@ -28,10 +29,9 @@ class InMemoryUnsupervisedDataset(Dataset):
             for transform in self.transforms:
                 sample = transform(sample)
 
-        #scaling
-        sample = torch.from_numpy(
-            (sample - sample.min())/(sample.max() - sample.min())
-        ).to(torch.float32)
+        sample = torch.from_numpy(sample).to(torch.float32)
+
+        if self.min_max_scaling: (sample - sample.min())/(sample.max() - sample.min())
         if self.is_squeeze: sample = sample.squeeze()
         if self.is_unsqueeze: sample = sample.unsqueeze(axis=-3)
         if self.t_max is not None: sample = sample[..., :self.t_max]
@@ -44,11 +44,12 @@ class InMemoryUnsupervisedDataset(Dataset):
             yield torch.stack([self.__getitem__(idx) for idx in inds])
 
 class InMemorySupervisedDataset(Dataset):
-    def __init__(self, source=None, source_samples=None, source_labels=None, transforms=None, t_max=None, is_squeeze=False, is_unsqueeze=False):
+    def __init__(self, source=None, source_samples=None, source_labels=None, transforms=None, t_max=None, is_squeeze=False, is_unsqueeze=False, min_max_scaling=True):
         self.transforms = transforms
         self.t_max = t_max
         self.is_squeeze = is_squeeze
         self.is_unsqueeze = is_unsqueeze
+        self.min_max_scaling = min_max_scaling
 
         if source is not None:
             self.data = source
@@ -86,9 +87,9 @@ class InMemorySupervisedDataset(Dataset):
                 sample = transform(sample)
 
         #scaling
-        sample = torch.from_numpy(
-            (sample - sample.min())/(sample.max() - sample.min())
-        ).to(torch.float32)
+        sample = torch.from_numpy(sample).to(torch.float32)
+
+        if self.min_max_scaling: sample = (sample - sample.min())/(sample.max() - sample.min())
         if self.is_squeeze: sample = sample.squeeze()
         if self.is_unsqueeze: sample = sample.unsqueeze(axis=-3)
         if self.t_max is not None: sample = sample[..., :self.t_max]

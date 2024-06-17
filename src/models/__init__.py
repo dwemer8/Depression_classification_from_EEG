@@ -17,7 +17,7 @@ from .UNet import UNet
 from src.utils.common import upd, printLog
 from src.trainer.helpers import load_sklearn_model
 from . import honke_higgins_2010_15274
-from . import ellis_sattiraju_2023_10385424
+from . import FNN
 
 def parameters_number(model):
     return torch.sum(torch.tensor([torch.prod(torch.tensor(parameters.shape)) for parameters in model.parameters()]))
@@ -325,6 +325,7 @@ class ModelsZoo:
 
     def get_AE_honke_higgins_2010_15274(config):
         '''
+        Reimplementation of encoder and decoder from "REPRESENTATION LEARNING FOR IMPROVED INTERPRETABILITY AND CLASSIFICATION ACCURACY OF CLINICAL FACTORS FROM EEG"
         parameters for (B, 3, 128) -> (B, 10)
         '''
 
@@ -373,6 +374,7 @@ class ModelsZoo:
     
     def get_bVAE_honke_higgins_2010_15274(config):
         '''
+        Reimplementation of encoder and decoder from "REPRESENTATION LEARNING FOR IMPROVED INTERPRETABILITY AND CLASSIFICATION ACCURACY OF CLINICAL FACTORS FROM EEG"
         parameters for (B, 3, 128) -> (B, 10)
         '''
 
@@ -422,6 +424,9 @@ class ModelsZoo:
         return model, model_config
     
     def get_ellis_sattiraju_2023_10385424(config):
+        '''
+        Reimplementation of architecture from "Improving Multichannel Raw Electroencephalography-based Diagnosis of Major Depressive Disorder via Transfer Learning with Single Channel Sleep Stage Data"
+        '''
         model_config = {
             "model_parameters": {
                 "modules_params": [
@@ -461,7 +466,33 @@ class ModelsZoo:
             }
         }
         model_config = upd(model_config, config)
-        return ellis_sattiraju_2023_10385424.FNN(**model_config["model_parameters"]), model_config
+        return FNN.FNN(**model_config["model_parameters"]), model_config
+    
+    def get_sandheep_vineeth_2019_8929254(config):
+        '''
+        Reimplementation of architecture from "Performance analysis of deep learning CNN in classification of depression EEG signals"
+        '''
+        model_config = {
+            "model_parameters": {
+                "modules_params": [
+                    ("Conv1d", {"in_channels": 1, "out_channels" : 32, "kernel_size" : 5, "stride": 2}),
+                    ("ReLU", {}),
+                    ("MaxPool1d", {"kernel_size": 2, "stride": 2}),
+
+                    ("FlattenLazyLinear", {"out_features": 1024}),
+                    ("ReLU", {}),
+
+                    ("LazyLinear", {"out_features": 32}),
+                    ("ReLU", {}),
+
+                    ("LazyLinear", {"out_features": 2}),
+
+                    # ("Softmax", {"dim" : 1})
+                ]
+            }
+        }
+        model_config = upd(model_config, config)
+        return FNN.FNN(**model_config["model_parameters"]), model_config
     
     # def get_UNet(config):
     #     if config is None: config = {}

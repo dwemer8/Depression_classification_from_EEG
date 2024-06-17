@@ -3,9 +3,9 @@
     "method": "direct restoration",
     "save_path": "model_weights/",
     "log_path": "logs/",
-    "hash": "0x9fa0cc4",
+    "hash": "0xd1242344",
     "run_hash": "0",
-    "run_name": "ellis_sattiraju_2023_10385424",
+    "run_name": "sandheep_vineeth_2019_8929254",
     "seed": 0,
     "n_seeds": 3,
     "display_mode": "terminal",
@@ -26,45 +26,52 @@
                     "start_epoch": 1
                 },
                 "source": {
-                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl",
+                    "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl",
                     "name": "inhouse_dataset"
                 },
                 "n_samples": null,
                 "preprocessing": {
                     "t_max": null,
                     "is_squeeze": false,
-                    "is_unsqueeze": false
+                    "is_unsqueeze": false,
+                    "min_max_scaling": false
                 }
             }
         },
         "val": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl"
             },
             "size": 30,
             "n_samples": null,
             "preprocessing": {
                 "is_squeeze": false,
                 "is_unsqueeze": false,
-                "t_max": null
+                "t_max": null,
+                "min_max_scaling": false
             }
         },
         "test": {
             "source": {
                 "name": "inhouse_dataset",
-                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/fz_cz_pz/dataset_128_60.0_6.0.pkl"
+                "file": "Data/inhouse_dataset/EEG_baseline_with_markers_cleaned/preprocessed_data/EEG_baseline/sandheep_vineeth_2019_8929254_fp1/dataset_256_2.7.pkl"
             },
             "size": 30,
             "n_samples": null,
             "preprocessing": {
                 "is_squeeze": false,
                 "is_unsqueeze": false,
-                "t_max": null
+                "t_max": null,
+                "min_max_scaling": false
             }
         }
     },
-    "model": {},
+    "model": {
+        "model": "sandheep_vineeth_2019_8929254",
+        "model_description": "sandheep_vineeth_2019_8929254",
+        "type": "supervised"
+    },
     "optimizer": {
         "optimizer": "AdamW",
         "kwargs": {
@@ -130,7 +137,7 @@
             ]
         },
         "ml_eval_function": [
-            "evaluateClassifier"
+            "evaluateDeepClassifier"
         ],
         "ml_eval_function_tag": [
             "d"
@@ -138,13 +145,6 @@
         "ml_eval_function_kwargs": [
             {
                 "verbose": 10,
-                "test_size": 0.33,
-                "seed": "{SEED}",
-                "evaluate_on_train": false,
-                "cv_scorer": [
-                    "average_precision_score",
-                    "soft"
-                ],
                 "metrics": [
                     [
                         "balanced_accuracy_score",
@@ -236,7 +236,7 @@
             ]
         },
         "ml_eval_function": [
-            "evaluateClassifier"
+            "evaluateDeepClassifier"
         ],
         "ml_eval_function_tag": [
             "d"
@@ -244,13 +244,6 @@
         "ml_eval_function_kwargs": [
             {
                 "verbose": 10,
-                "test_size": 0.33,
-                "seed": "{SEED}",
-                "evaluate_on_train": false,
-                "cv_scorer": [
-                    "average_precision_score",
-                    "soft"
-                ],
                 "metrics": [],
                 "metrics_for_CI": [
                     [
